@@ -2,9 +2,9 @@
   --card-width: 125px;
   --card-height: 175px;
 
-  background-color: rgb(255, 217, 67);
-  border-radius: 5px;
-  border: 4px solid black;
+  border-radius: 10px;
+  background-image: url('/pap.png');
+  border: 4px solid rgba(0,0,0,0.5);
 
   max-width: var(--card-width);
   min-width: var(--card-width);
@@ -25,7 +25,8 @@
 }
 
 .card.empty {
-  background-color: white !important;
+  background-color: rgba(255, 255, 255, 0.75) !important;
+  background-image: none;
   box-shadow: none !important;
   border: 4px solid grey!important;
 }

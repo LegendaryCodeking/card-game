@@ -1,85 +1,153 @@
-import { useState } from "react"
-import Card from "@/components/card"
-import CardState from "@/data/card-state";
-import PlayerState from "@/data/player-state";
-import PlayerStatus from "@/components/playerStatus";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react"
+import CardView from "@/components/card-view"
+import PlayerStatus from "@/components/player-status";
+import Player from "../../shared/player";
+import Game from "../../shared/game";
+import ServerConnection from "@/io/server-connection";
 
 export default function Home() {
 
-  // TODO: Rename "cards" to "desk"
-  // TODO: Rename "enemy" to "opponent"
-  let [ cards, setCards ] = useState([new CardState(), undefined, undefined, new CardState(), undefined, undefined]);
-  let [ hand, setHand ] = useState([new CardState({icon: "fire"}), new CardState({icon: 'arrow-repeat'}), new CardState({ icon: 'heart-arrow'}), undefined, undefined, undefined]);
-  let [ enemyPlayer, setEnemyPlayer ] = useState(new PlayerState());
-  let [ player, setPlayer ] = useState(new PlayerState());
+  // Our current player
+  const playerId = 0;
 
-  let [ selectedCardId, setSelectedCardId ] = useState(undefined);
-  let [ selectedHandCardId, setSelectedHandCardId ] = useState(undefined);
+  // Full state of the game
+  // TODO(vadim): Load the state of the game from the server
+  const [ game, setGame ] = useState(new Game({ players: [ new Player({ id: 1, name: "vadim" }), new Player({ id: 2, name: "Jack" }) ]}));
 
-  function onHandCardClick(cardId) {
-    // select the current card from the hand
+  const [ player, setPlayer ] = useState(new Player({ id: playerId, name: "vadim" + playerId }));
+  const [ opponent, setOpponent ] = useState(new Player());
+
+  const [ desk, setDesk ] = useState([]);
+  const [ hand, setHand ] = useState([]);
+
+  const [ selectedDeskCard, setSelectedDeskCard ] = useState(undefined);
+  const [ selectedHandCard, setSelectedHandCard ] = useState(undefined);
+
+  const connection = useRef(undefined);
+
+  useEffect(() => {
+    ServerConnection.connect().then(serverConnection => {
+      connection.current = serverConnection;
+      
+      serverConnection.join(0, player);
+
+      serverConnection.onFullUpdate(response => {
+        console.log("SC -> Full update")
+        const updatedGame = game.update(response.data);
+        setGame(updatedGame);
+      });
+
+      serverConnection.onPartialUpdate(response => {
+        console.log("SC -> Partial update");
+        const updatedGame = game.update(response.data);
+        setGame(updatedGame);
+      })
+
+      serverConnection.onError(error => {
+        console.error("SC -> " + error);
+      })
+    });
+
+    return () => {
+      if (connection.current) 
+        connection.current.close();
+    };
+  }, [])
+
+  useEffect(() => {
+
+    const updatedPlayer = game.getPlayer(playerId) ?? player;
+    setPlayer(updatedPlayer);
+    setOpponent(game.players.find(p => p.id !== playerId) ?? opponent);
+    setHand(updatedPlayer.hand.map(ref => ref === null ? undefined : ref));
+  }, [ game.players ]);
+
+  useEffect(() => { 
+    setDesk(game.desk.map(ref => ref === null ? undefined : ref)); 
+  }, [ game.desk ])
+
+  const onHandCardClick = useCallback(cardId => {
+    // Unselect the current card in the hand
+    if (cardId === selectedHandCard) {
+      setSelectedHandCard(undefined);
+      return;
+    }
+
+    // Select the current card from the hand
     if (hand[cardId] !== undefined) {
-      setSelectedHandCardId(cardId);
-      setSelectedCardId(undefined);
+      setSelectedHandCard(cardId);
+      setSelectedDeskCard(undefined);
     } else {
+      
+      // Move our card from the desk to the hand
+      if (selectedDeskCard !== undefined && desk[selectedDeskCard].owner === playerId) {
+        const cardFromDesk = desk[selectedDeskCard];
+        setDesk(desk.map((c, id) => id === selectedDeskCard ? undefined : c));
+        setHand(hand.map((c, id) => id === cardId ? cardFromDesk : c));
+        connection.current.moveCardFromDeskToHand(selectedDeskCard, cardId);
+        setSelectedHandCard(undefined);
+        setSelectedDeskCard(undefined);
+        return;
+      }
 
-      if (selectedCardId !== undefined && cards[selectedCardId].owner === 'player') {
-        const selectedCard = cards[selectedCardId];
-        setCards(cards.map((v, id) => id === selectedCardId ? undefined : v));
-        setHand(hand.map((v, id) => id === cardId ? selectedCard : v));
+      // Move our card from the hand to another place
+      if (selectedHandCard !== undefined) {
+        const cardFromHand = hand[selectedHandCard];
+        setHand(hand
+          .map((c, id) => id === cardId ? cardFromHand : c)
+          .map((c, id) => id === selectedHandCard ? undefined : c));
+        connection.current.moveCardFromHandToHand(selectedHandCard, cardId);
+        setSelectedDeskCard(undefined);
+        setSelectedHandCard(undefined);
       }
 
     }
-  }
+  }, [ hand, desk, selectedHandCard, selectedDeskCard, connection ]);
 
-  function takeNewCard() {
-    const index = hand.findIndex(card => card === undefined);
-    if (index >= 0) {
-      setHand(hand.map((v, id) => id === index ? new CardState() : v));
-    }
-  }
+  const onCardPull = useCallback(() => {
+    // TODO: connection.pullCard();
+  }, []);
 
-  function onCardClick(cardId) {
-    let isCardSlotFree = cards[cardId] === undefined;
-    let isCardSlotOccupied = cards[cardId] !== undefined;
-
-    if (cardId === selectedCardId) {
-      setSelectedCardId(undefined);
+  const onDeskCardClick = useCallback(cardId => {
+    // Unselect the current card on the desk
+    if (cardId === selectedDeskCard) {
+      setSelectedDeskCard(undefined);
       return;
     }
 
     // Select the current card from the desk
-    if (selectedCardId === undefined && isCardSlotOccupied) {
-      setSelectedCardId(cardId);
-      setSelectedHandCardId(undefined);
+    if (desk[cardId]) {
+      setSelectedDeskCard(cardId);
+      setSelectedHandCard(undefined);
       return;
-    }
+    } else {
 
-    if (selectedCardId !== undefined) {
-      // Move card to the free slot
-      if (isCardSlotFree) {
-        let selectedCard = cards[selectedCardId];
-        setCards(cards
-          .map((v, id) => id === selectedCardId? undefined : v)
-          .map((v, id) => id === cardId ? selectedCard: v));
-        setSelectedCardId(undefined);
-      } else {
-        // Select other card
-        setSelectedCardId(cardId);
+      // Move our card from the hand to the desk
+      if (selectedHandCard !== undefined) {
+        const cardFromHand = hand[selectedHandCard];
+        setDesk(desk.map((c, id) => id === cardId ? cardFromHand : c ));
+        setHand(hand.map((c, id) => id === selectedHandCard ? undefined : c ));
+        connection.current.moveCardFromHandToDesk(selectedHandCard, cardId);
+        setSelectedHandCard(undefined);
+        setSelectedDeskCard(undefined);
+        return;
       }
+
+      // Move card to the free slot
+      if (selectedDeskCard !== undefined) {
+        const cardFromDesk = desk[selectedDeskCard];
+        setDesk(desk
+          .map((c, id) => id === selectedDeskCard ? undefined : c)
+          .map((c, id) => id === cardId ? cardFromDesk: c));
+        connection.current.moveCardFromDeskToDesk(selectedDeskCard, cardId);
+        setSelectedDeskCard(undefined);
+        setSelectedHandCard(undefined);
+      } 
     }
 
-    // Move card from the hand to the desk
-    if (selectedHandCardId !== undefined && cards[cardId] === undefined) {
-      let selectedCard = hand[selectedHandCardId];
-      selectedCard.owner = "player";
-      setCards(cards.map((v, id) => id === cardId ? selectedCard : v));
-      setHand(hand.map((v, id) => id === selectedHandCardId ? undefined : v ));
-      setSelectedHandCardId(undefined);
-    }
-  }
+  }, [ hand, desk, selectedHandCard, selectedDeskCard, connection ]);
 
-  const deckCardOwnerOpponent = <div className='deck-card-owner-opponent'>{ enemyPlayer.name }</div>
+  const deckCardOwnerOpponent = <div className='deck-card-owner-opponent'>{ opponent.name }</div>
   const deckCardOwnerPlayer = <div className='deck-card-owner-player'>{ player.name }</div>
 
   // TODO: Rename "card-container" to "desk-container"
@@ -87,39 +155,50 @@ export default function Home() {
   return (
     <div className="desk-container">
       <div className="opponent-container">
-        <PlayerStatus player={ enemyPlayer } />
+        <PlayerStatus player={ opponent } />
       </div>
-      <div>opponent status</div>
+
+      <div></div>
+
       <div className="card-container">
+        <div className="event-container">werew</div>
+
         <div className="inner-card-container">
-          { cards.map((v, id) => 
+          { desk.map((ref, id) => 
             <div className="deck-card-container" key={id}>
-              <div className="deck-card-owner">{ v && v.owner === 'opponent' ? deckCardOwnerOpponent : '' }</div>
-              <Card 
-                card={v} 
-                onClick={ () => onCardClick(id) } 
-                selected={ id === selectedCardId } />
-              <div className="deck-card-owner">{ v && v.owner === "player" ? deckCardOwnerPlayer : '' }</div>
+              <div className="deck-card-owner">{ ref && ref.owner === opponent.id ? deckCardOwnerOpponent : '' }</div>
+              <CardView 
+                card={ ref ? game.cards[ref.id] : undefined } 
+                onClick={ () => onDeskCardClick(id) } 
+                selected={ id === selectedDeskCard } />
+              <div className="deck-card-owner">{ ref && ref.owner === player.id ? deckCardOwnerPlayer : '' }</div>
             </div>
             ) 
           }
         </div>
+
+        <div className="turn-button-container">
+          <button className="end-turn-button"><i class="bi bi-play-circle-fill"></i></button>
+        </div>
+
       </div>
-      <div>another status</div>
+
+      <div></div>
+
       <div className="player-container">
         <div className="player-status-container">
           <PlayerStatus player={ player }/>
         </div>
         <div className="card-container">
-          { hand.map((v, id) => 
-            <Card 
+          { hand.map((ref, id) => 
+            <CardView 
               key={id} 
-              card={v} 
+              card={ ref ? game.cards[ref.id] : undefined } 
               onClick={() => onHandCardClick(id) }
-              selected={ id === selectedHandCardId }/>)}
+              selected={ id === selectedHandCard }/>)}
         </div>
         <div className="player-deck-container">
-          <Card onClick={ takeNewCard }/>
+          <CardView onClick={ onCardPull }/>
         </div>
       </div>
     </div>

@@ -1,0 +1,10 @@
+
+.player-avatar {
+  background-color: white;
+  padding: 10px;
+  font-size: 2rem;
+
+  display: grid;
+  justify-items: center;
+  align-items: center;
+}

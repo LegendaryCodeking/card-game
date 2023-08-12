@@ -1,0 +1,6 @@
+
+export const Error = {
+  GAME_IS_NOT_FOUND: 'GAME_IS_NOT_FOUND',
+  GAME_IS_FULL: "GAME_IS_FULL",
+  UNKNOWN_EVENT: "UNKNOWN_EVENT",
+}
