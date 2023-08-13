@@ -1,3 +1,5 @@
+import { Action } from "./action.js";
+import { Effect } from "./effect.js";
 
 export default class Card {
   id = "shield";
@@ -18,8 +20,10 @@ export class CardReference {
   }
 }
 
-function dealDamage(game, slotId, playerId, damage) {
-  game.getOpponent(playerId).health -= damage;
+function dealDamage(actions, game, playerId, damage) {
+  const opponent = game.getOpponent(playerId);
+  actions.push(Action.damage(opponent.id, playerId, damage));
+  opponent.health -= damage;
 }
 
 export const Cards = [
@@ -28,9 +32,10 @@ export const Cards = [
     id: "shield", 
     icon: "shield-shaded", 
     name: "Shield", 
-    description: "Blocks all further damage",
-    action: ( game, slotId, playerId ) => {
-      
+    description: "Создает щит который блокирует весь последующий урон.",
+    action: ( actions, game, slotId, playerId ) => {
+      actions.push(Action.effectAdded(playerId, Effect.HAS_SHIELD))
+      game.getPlayer(playerId).effects.push(Effect.HAS_SHIELD);
     }
   }),
 
@@ -38,9 +43,9 @@ export const Cards = [
     id: "arrow", 
     icon: "heart-arrow", 
     name: "Arrow", 
-    description: "Deals 3 damage",
-    action: ( game, slotId, playerId ) => {
-      game.getOpponent(playerId).health -= 3;
+    description: "Наносит 3 урона сопернику.",
+    action: ( actions, game, slotId, playerId ) => {
+      dealDamage( actions, game, slotId, playerId, 3);
     }
    }),
 
@@ -48,15 +53,29 @@ export const Cards = [
     id: "fireball", 
     icon: "fire", 
     name: "Fireball", 
-    description: "Deals 3 damage and destroys any opponent's shields"}),
+    description: "Уничтожает один щит соперника. Если щита нет, то наносит 6 урона.",
+    action: ( actions, game, slotId, playerId ) => {
+      const opponent = game.getOpponent(playerId);
+      
+      const shieldId = opponent.effects.findIndex(e => e === Effect.HAS_SHIELD);
+      opponent.effects = opponent.effects.splice(shieldId, 1);
+
+      actions.push(Action.effectRemoved(playerId, Effect.HAS_SHIELD));
+    }
+  }),
 
   new Card({ 
     id: "reverse", 
     icon: "arrow-down-up", 
     name: "Reverse", 
-    description: "Changes the owner of the next card" ,
-    action: ( game, slotId, playerId ) => {
-      
+    description: "Меняет владельца следующего заклинания. Заклинание соперника станет вашим, а ваше заклинания станет заклинанием соперника." ,
+    action: ( actions, game, slotId, playerId ) => {
+      if ((slotId + 1) >= game.desk.length) return;
+      const cardRef = game.desk[slotId + 1];
+      if (!cardRef) return;
+
+      cardRef.owner = game.getOpponent(cardRef.owner);
+      actions.push(Action.changeOwner(slotId + 1));
     }
   }),
 ];

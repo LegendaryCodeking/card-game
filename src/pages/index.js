@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from "react"
 import CardView from "@/components/card-view"
 import PlayerStatus from "@/components/player-status";
 import Player from "../../shared/player";
-import Game from "../../shared/game";
+import Game, { GameState } from "../../shared/game";
 import ServerConnection from "@/io/server-connection";
 
 export default function Home() {
@@ -33,18 +33,16 @@ export default function Home() {
 
       serverConnection.onFullUpdate(response => {
         console.log("SC -> Full update")
-        const updatedGame = game.update(response.data);
-        setGame(updatedGame);
+        setGame((game) => game.update(response.data));
       });
 
       serverConnection.onPartialUpdate(response => {
         console.log("SC -> Partial update");
-        const updatedGame = game.update(response.data);
-        setGame(updatedGame);
+        setGame((game) => game.update(response.data));
       })
 
-      serverConnection.onError(error => {
-        console.error("SC -> " + error);
+      serverConnection.onError(response => {
+        console.error(`SC -> ${ response.data }`);
       })
     });
 
@@ -55,7 +53,6 @@ export default function Home() {
   }, [])
 
   useEffect(() => {
-
     const updatedPlayer = game.getPlayer(playerId) ?? player;
     setPlayer(updatedPlayer);
     setOpponent(game.players.find(p => p.id !== playerId) ?? opponent);
@@ -147,8 +144,23 @@ export default function Home() {
 
   }, [ hand, desk, selectedHandCard, selectedDeskCard, connection ]);
 
+  const onCompleteTurn = useCallback(() => {
+    connection.current.sendCompleteTurn();
+  }, []);
+
   const deckCardOwnerOpponent = <div className='deck-card-owner-opponent'>{ opponent.name }</div>
   const deckCardOwnerPlayer = <div className='deck-card-owner-player'>{ player.name }</div>
+
+  let opponentBadge = undefined;
+  let playerBadge = undefined;
+
+  if (game.state === GameState.PLAYER_TURN) {
+    if (game.turnPlayerId === player.id) {
+      playerBadge = <div className='player-badge'>Ваш ход</div>
+    } else {
+      opponentBadge = <div className='player-badge'>Ход соперника</div>
+    }
+  }
 
   // TODO: Rename "card-container" to "desk-container"
   // and "desk-container" to "game-container"
@@ -158,32 +170,40 @@ export default function Home() {
         <PlayerStatus player={ opponent } />
       </div>
 
-      <div></div>
 
       <div className="card-container">
         <div className="event-container">werew</div>
 
-        <div className="inner-card-container">
-          { desk.map((ref, id) => 
-            <div className="deck-card-container" key={id}>
-              <div className="deck-card-owner">{ ref && ref.owner === opponent.id ? deckCardOwnerOpponent : '' }</div>
-              <CardView 
-                card={ ref ? game.cards[ref.id] : undefined } 
-                onClick={ () => onDeskCardClick(id) } 
-                selected={ id === selectedDeskCard } />
-              <div className="deck-card-owner">{ ref && ref.owner === player.id ? deckCardOwnerPlayer : '' }</div>
-            </div>
-            ) 
-          }
+        <div className='center-container'>
+          <div className='player-badge-container top'>
+            { opponentBadge }
+          </div>
+
+          <div className="inner-card-container">
+            { desk.map((ref, id) => 
+              <div className="deck-card-container" key={id}>
+                <div className="deck-card-owner">{ ref && ref.owner === opponent.id ? deckCardOwnerOpponent : '' }</div>
+                <CardView 
+                  card={ ref ? game.cards[ref.id] : undefined } 
+                  onClick={ () => onDeskCardClick(id) } 
+                  selected={ id === selectedDeskCard } />
+                <div className="deck-card-owner">{ ref && ref.owner === player.id ? deckCardOwnerPlayer : '' }</div>
+              </div>
+              ) 
+            }
+          </div>
+
+          <div className='player-badge-container bottom'>
+            { playerBadge }
+          </div>
         </div>
 
         <div className="turn-button-container">
-          <button className="end-turn-button"><i class="bi bi-play-circle-fill"></i></button>
+          <button className="end-turn-button" onClick={ onCompleteTurn }><i className="bi bi-play-circle-fill"></i></button>
         </div>
 
       </div>
 
-      <div></div>
 
       <div className="player-container">
         <div className="player-status-container">

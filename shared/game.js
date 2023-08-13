@@ -113,12 +113,14 @@ export default class Game {
     }
   }
 
-  performExecutionTurn() {
+  performExecutionTurn(events) {
     if (this.state === GameState.EXECUTION_TURN) {
       const executionState = this.executionTurnState;
+      const slotId = executionState.currentSlotId;
 
-      const cardRef = this.desk[executionState.currentSlotId];
-      const card = this.cards[cardRef.id];
+      const cardRef = this.desk[slotId];
+      // TODO: Add the list of events
+      this.cards.find(c => c.id === cardRef.id).action(events, this, slotId, turnPlayerId);
 
       // Select the next card for the next execution
       executionState.currentSlotId += 1;

@@ -1,6 +1,6 @@
 import { WebSocketServer } from "ws";
 import Game, { GameState } from "../shared/game.js";
-import ClientConnection from "./client-connection.js";
+import ClientConnection from "./io/client-connection.js";
 import { Error } from "../shared/error.js";
 
 const server = new WebSocketServer({ port: 8080 });
@@ -65,6 +65,30 @@ server.on('connection', socket => {
 
     // Send the entire state of the game
     connection.sendFullUpdate(game);
+  });
+
+  // On every event that we recieve, we should check if the current state
+  // is "execution state" which should be executed async by the server.
+  connection.onEvent((request) => {
+    function scheduleNewTurn() {
+      const game = connection.game;
+
+      if (game && game.state === GameState.EXECUTION_TURN) {
+        const actions = [];
+        game.performExecutionTurn(actions);
+        game.actions = actions;
+        connection.sendPartialUpdate(game, ["actions", "players", "desk", "executionTurnState", "state"])
+        setTimeout(() => scheduleNewTurn(), 1000);
+      }
+    }
+
+    scheduleNewTurn();
+  })
+
+  connection.onCompleteTurn(() => {
+    const game = connection.game;
+    game.nextTurn();
+    connection.sendPartialUpdate(game, [ "state" ]);
   });
 
   // TODO: In listeners below we should verify if it possible for the player to do so

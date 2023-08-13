@@ -2,18 +2,20 @@ import { Events } from "../../shared/events";
 
 export default class ServerConnection {
 
+  listeners = new Map();
+
   constructor(socket) {
     this.socket = socket;
 
     socket.addEventListener('message', event => {
       const response = JSON.parse(event.data.toString());
-      // TODO: We probably need only one type of UPDATE
-      // the client can determine itself if the update should be full or partial
-      // depending on the data
-      if (response.event === Events.FULL_UPDATE) this.onFullUpdateCallback(response);
-      else if (response.event === Events.PARTIAL_UPDATE) this.onPartialUpdateCallback(response);
-      else if (response.event === Events.ERROR) this.onErrorCallback(response);
-      else console.error(`Unknown type of the event: ${ response.event }`);
+
+      const listener = this.listeners.get(response.event);
+      if (listener) {
+        listener(response);
+      } else {
+        console.error(`Unknown type of the event: ${ response.event }`);
+      }
     })
   }
 
@@ -77,16 +79,22 @@ export default class ServerConnection {
     });
   }
 
+  sendCompleteTurn() {
+    this.send({
+      event: Events.COMPLETE_TURN,
+    });
+  }
+
   onError(callback) {
-    this.onErrorCallback = callback;
+    this.listeners.set(Events.ERROR, callback);
   }
 
   onFullUpdate(callback) {
-    this.onFullUpdateCallback = callback;
+    this.listeners.set(Events.FULL_UPDATE, callback);
   }
 
   onPartialUpdate(callback) {
-    this.onPartialUpdateCallback = callback;
+    this.listeners.set(Events.PARTIAL_UPDATE, callback);
   }
 
   close() {

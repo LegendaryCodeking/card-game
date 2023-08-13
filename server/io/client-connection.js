@@ -1,5 +1,5 @@
-import { Events } from "../shared/events.js";
-import { Error } from "../shared/error.js";
+import { Events } from "../../shared/events.js";
+import { Error } from "../../shared/error.js";
 
 export default class ClientConnection {
 
@@ -13,11 +13,18 @@ export default class ClientConnection {
 
     socket.on('message', data => {
       const request = JSON.parse(data.toString());
+      this.onEvent(request);
+
       const listener = this.listeners.get(request.event);
 
       if (listener) {
-        console.log(`CC -> Event from ${ this.playerId }: ${ request.event }`)
-        listener(request);
+        try {
+          console.log(`CC -> Event from ${ this.playerId }: ${ request.event }`)
+          listener(request);
+        } catch (error) {
+          console.error(`CC -> Fatal error: ${ error }`)
+          this.sendError(Error.INTERNAL_ERROR);
+        }
       } else {
         console.error(`CC -> Unknown event ${ request.event }`)
         this.sendError(Error.UNKNOWN_EVENT);
@@ -81,6 +88,14 @@ export default class ClientConnection {
     this.listeners.set(Events.MOVE_CARD_FROM_HAND_TO_HAND, (request) => {
       callback(request.fromSlotId, request.toSlotId);
     });
+  }
+
+  onCompleteTurn(callback) {
+    this.listeners.set(Events.COMPLETE_TURN, () => callback());
+  }
+
+  onEvent(callback) {
+    this.onEvent = callback;
   }
 
   send(object) {
