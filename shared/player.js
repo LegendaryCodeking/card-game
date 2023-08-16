@@ -1,4 +1,6 @@
 
+// TODO: Add "PlayerInstance" class that will contain
+// game specific state for the player
 
 export default class Player {
   
@@ -17,5 +19,4 @@ export default class Player {
   constructor(data) {
     Object.assign(this, data);
   }
-
 }

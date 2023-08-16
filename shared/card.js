@@ -13,6 +13,7 @@ export default class Card {
   }
 }
 
+// Rename to "CardInstance"
 export class CardReference {
   constructor(id, owner) {
     this.id = id;
@@ -20,9 +21,8 @@ export class CardReference {
   }
 }
 
-function dealDamage(actions, game, playerId, damage) {
-  const opponent = game.getOpponent(playerId);
-  actions.push(Action.damage(opponent.id, playerId, damage));
+function dealDamage(actions, player, opponent, damage) {
+  actions.push(Action.damage(opponent.id, player.id, damage));
   opponent.health -= damage;
 }
 
@@ -33,9 +33,9 @@ export const Cards = [
     icon: "shield-shaded", 
     name: "Shield", 
     description: "Создает щит который блокирует весь последующий урон.",
-    action: ( actions, game, slotId, playerId ) => {
-      actions.push(Action.effectAdded(playerId, Effect.HAS_SHIELD))
-      game.getPlayer(playerId).effects.push(Effect.HAS_SHIELD);
+    action: ( actions, game, slotId, player, opponent) => {
+      actions.push(Action.effectAdded(player.id, Effect.HAS_SHIELD))
+      player.effects.push(Effect.HAS_SHIELD);
     }
   }),
 
@@ -44,8 +44,8 @@ export const Cards = [
     icon: "heart-arrow", 
     name: "Arrow", 
     description: "Наносит 3 урона сопернику.",
-    action: ( actions, game, slotId, playerId ) => {
-      dealDamage( actions, game, slotId, playerId, 3);
+    action: ( actions, game, slotId, player, opponent) => {
+      dealDamage( actions, opponent, 3);
     }
    }),
 
@@ -54,13 +54,11 @@ export const Cards = [
     icon: "fire", 
     name: "Fireball", 
     description: "Уничтожает один щит соперника. Если щита нет, то наносит 6 урона.",
-    action: ( actions, game, slotId, playerId ) => {
-      const opponent = game.getOpponent(playerId);
-      
+    action: ( actions, game, slotId, player, opponent ) => {
       const shieldId = opponent.effects.findIndex(e => e === Effect.HAS_SHIELD);
       opponent.effects = opponent.effects.splice(shieldId, 1);
 
-      actions.push(Action.effectRemoved(playerId, Effect.HAS_SHIELD));
+      actions.push(Action.effectRemoved(player.id, Effect.HAS_SHIELD));
     }
   }),
 
@@ -69,7 +67,7 @@ export const Cards = [
     icon: "arrow-down-up", 
     name: "Reverse", 
     description: "Меняет владельца следующего заклинания. Заклинание соперника станет вашим, а ваше заклинания станет заклинанием соперника." ,
-    action: ( actions, game, slotId, playerId ) => {
+    action: ( actions, game, slotId, player, opponent) => {
       if ((slotId + 1) >= game.desk.length) return;
       const cardRef = game.desk[slotId + 1];
       if (!cardRef) return;

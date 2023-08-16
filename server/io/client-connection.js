@@ -5,7 +5,7 @@ export default class ClientConnection {
 
   listeners = new Map();
 
-  playerId = undefined;
+  player = undefined;
   game = undefined;
 
   constructor(socket) {
@@ -18,17 +18,17 @@ export default class ClientConnection {
       const listener = this.listeners.get(request.event);
 
       if (listener) {
-        try {
-          console.log(`CC -> Event from ${ this.playerId }: ${ request.event }`)
-          listener(request);
-        } catch (error) {
-          console.error(`CC -> Fatal error: ${ error }`)
-          this.sendError(Error.INTERNAL_ERROR);
-        }
+        console.log(`CC -> Event from ${ this.player?.name }: ${ request.event }`)
+        listener(request);
       } else {
-        console.error(`CC -> Unknown event ${ request.event }`)
+        console.error(`CC -> Unknown event ${ request.event } from ${ this.player?.name }`)
         this.sendError(Error.UNKNOWN_EVENT);
       }
+    });
+
+    socket.on('close', () => {
+      console.log(`CC -> Close connection for ${ this.player?.name }`)
+      this.onClose()
     });
   }
 
@@ -55,6 +55,13 @@ export default class ClientConnection {
     });
   }
 
+  sendGameIsFound(data) {
+    this.send({
+      event: Events.GAME_IS_FOUND,
+      data
+    });
+  }
+
   sendError(error) {
     this.send({
       event: Events.ERROR,
@@ -64,6 +71,10 @@ export default class ClientConnection {
 
   onJoin(callback) {
     this.listeners.set(Events.JOIN_GAME, callback);
+  }
+
+  onFindGame(callback) {
+    this.listeners.set(Events.FIND_GAME, callback);
   }
 
   onMoveCardFromHandToDesk(callback) {
@@ -89,6 +100,10 @@ export default class ClientConnection {
       callback(request.fromSlotId, request.toSlotId);
     });
   }
+
+  onClose(callback) {
+    this.onClose = callback;
+  } 
 
   onCompleteTurn(callback) {
     this.listeners.set(Events.COMPLETE_TURN, () => callback());

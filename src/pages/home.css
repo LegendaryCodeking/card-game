@@ -1,0 +1,16 @@
+.home-page-container {
+  display: grid;
+  height: 100%;
+  width: 100%;
+  align-content: center;
+  justify-content: center;
+}
+
+.home-control-container {
+  padding: 1rem;
+  border: 1px solid grey;
+  border-radius: 1rem;
+  display: grid;
+  grid-auto-flow: row;
+  gap: 1rem;
+}

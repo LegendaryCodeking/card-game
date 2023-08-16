@@ -36,17 +36,6 @@ export default class ServerConnection {
     return promise;
   }
 
-  /**
-   * Tries to join the game
-   */
-  join(gameId, player) {
-    this.send({
-      event: Events.JOIN_GAME,
-      gameId: gameId,
-      player: player
-    });
-  }
-
   moveCardFromHandToDesk(handSlotId, deskSlotId) {
     this.send({
       event: Events.MOVE_CARD_FROM_HAND_TO_DESK,
@@ -85,6 +74,21 @@ export default class ServerConnection {
     });
   }
 
+  sendFindGame(player) {
+    this.send({
+      event: Events.FIND_GAME,
+      player 
+    })
+  }
+
+  sendJoinGame(gameId, player) {
+    this.send({
+      event: Events.JOIN_GAME,
+      gameId,
+      player
+    });
+  }
+
   onError(callback) {
     this.listeners.set(Events.ERROR, callback);
   }
@@ -97,9 +101,17 @@ export default class ServerConnection {
     this.listeners.set(Events.PARTIAL_UPDATE, callback);
   }
 
+  onGameIsFound(callback) {
+    this.listeners.set(Events.GAME_IS_FOUND, callback);
+  }
+
   close() {
     console.log("SC -> Closing connection")
     this.socket.close();
+  }
+
+  clearListeners() {
+    this.listeners.clear();
   }
 
   send(object) {

@@ -12,19 +12,19 @@ export class Action {
     Object.assign(this, props);
   }
 
-  damage(target, source, damage) {
+  static damage(target, source, damage) {
     return new Action({ type: ActionType.DAMAGE, target, source, damage })
   }
 
-  effectAdded(target, effect) {
+  static effectAdded(target, effect) {
     return new Action({ type: ActionType.EFFECT_ADDED, target, effect });
   }
 
-  effectRemoved(target, effect) {
+  static effectRemoved(target, effect) {
     return new Action({ type: ActionType.EFFECT_REMOVED, target, effect });
   }
 
-  changeOwner(target) {
+  static changeOwner(target) {
     return new Action({ type: ActionType.CHANGE_OWNER, target });
   }
 }

@@ -154,5 +154,5 @@ html, body {
   display: grid;
   grid-auto-flow: row;
   justify-items: center;
-  align-items: end;
+  align-items: start;
 }
