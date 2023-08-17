@@ -1,5 +1,6 @@
+import "./player-health.css"
 
-export default function PlayerHealthView({ player }) {
+export default function PlayerHealth({ player }) {
   return (
     <div className='player-health-bar'>
       <div><i class="bi bi-heart-fill"></i></div>

@@ -14,7 +14,7 @@ export default function HomePage({ player, setPlayer, connection, onFindGame }) 
     if (playerName.length > 0) {
       
       // Update our player data
-      const updatedPlayer = new Player({ ...player, name: playerName });
+      const updatedPlayer = new Player({ ...player, id: playerName, name: playerName });
       setPlayer(updatedPlayer);
 
       // Request server to find a game

@@ -55,6 +55,7 @@ server.on('connection', socket => {
     } else {
 
       // Create a new one
+      console.log("MN -> Creating new game")
       const game = new Game();
       const gameId = uuid();
       game.addPlayer(request.player);
@@ -129,11 +130,11 @@ server.on('connection', socket => {
         getPlayersConnections(game.players)
           .forEach(con => con.sendPartialUpdate(game, ['actions', 'players', 'desk', 'executionTurnState', 'state']));
 
-        setTimeout(() => scheduleNewTurn(), 2000);
+        setTimeout(() => scheduleNewTurn(), 4000);
       }
     }
 
-    setTimeout(() => scheduleNewTurn(), 2000);
+    setTimeout(() => scheduleNewTurn(), 4000);
   })
 
   /**
@@ -153,6 +154,8 @@ server.on('connection', socket => {
   // TODO: In listeners below we should verify if it possible for the player to do so
 
   connection.onMoveCardFromHandToDesk((handSlotId, deskSlotId) => {
+    // TODO: Verify that player is able to place more cards to the desk
+
     const game = connection.game;
     const player = game.getPlayer(connection.player.id);
 
@@ -189,6 +192,9 @@ server.on('connection', socket => {
   });
 
   connection.onMoveCardFromDeskToDesk((fromSlotId, toSlotId) => {
+    // TODO: Verify that order is correct when player is 
+    // moving cards of his opponent
+
     const game = connection.game;
     const player = game.getPlayer(connection.player.id);
 

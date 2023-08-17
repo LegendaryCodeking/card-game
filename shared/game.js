@@ -154,7 +154,6 @@ export default class Game {
       // Perform action for the current card
       const cardRef = this.desk[slotId];
       if (cardRef) {
-        console.log(cardRef);
         this.getCard(cardRef)
           .action(actions, this, slotId, this.getPlayer(cardRef.owner), this.getOpponent(cardRef.owner));
       }

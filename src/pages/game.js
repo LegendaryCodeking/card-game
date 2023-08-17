@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback } from "react"
 import CardView from "@/components/card-view"
-import PlayerStatus from "@/components/player-status";
 import Player from "../../shared/player";
 import Game, { GameState } from "../../shared/game";
 import "./game.css"
+import PlayerHealth from "@/components/player-health";
+import PlayerCards from "@/components/player-cards";
+import PlayerAvatar from "@/components/player-avatar";
 
 export default function GamePage({ player, setPlayer, connection, gameId }) {
 
@@ -12,6 +14,9 @@ export default function GamePage({ player, setPlayer, connection, gameId }) {
 
   const [ desk, setDesk ] = useState([]);
   const [ hand, setHand ] = useState([]);
+
+  const [ deskDisabled, setDeskDisabled ] = useState([]);
+  const [ handDisabled, setHandDisabled ] = useState(false)
 
   const [ selectedDeskCard, setSelectedDeskCard ] = useState(undefined);
   const [ selectedHandCard, setSelectedHandCard ] = useState(undefined);
@@ -39,6 +44,7 @@ export default function GamePage({ player, setPlayer, connection, gameId }) {
   }, [])
 
   useEffect(() => {
+    // Whenever the game is updated, we should updated players
     const updatedPlayer = game.getPlayer(player.id) ?? player;
     setPlayer(updatedPlayer);
     setOpponent(game.players.find(p => p.id !== player.id) ?? opponent);
@@ -46,8 +52,44 @@ export default function GamePage({ player, setPlayer, connection, gameId }) {
   }, [ game.players ]);
 
   useEffect(() => { 
+    // Whenever game is updated, we should extract the desk
     setDesk(game.desk.map(ref => ref === null ? undefined : ref)); 
+    setDeskDisabled(game.desk.map(r => false));
   }, [ game.desk ])
+
+  useEffect(() => {
+    if (selectedDeskCard) {
+      const card = desk[selectedDeskCard];
+      if (card.owner !== player.id) {
+        // it is not our card, so the entire hand should be disabled
+        setHandDisabled(true);
+
+        let nextClosestPlayerCard = desk.length;
+        for (let i = selectedDeskCard + 1; i < desk.length; i++) {
+          if (desk[i] && desk[i].owner === opponent.id) {
+            nextClosestPlayerCard = i;
+            break;
+          }
+        }
+
+        let prevClosestPlayerCard = 0;
+        for (let i = selectedDeskCard - 1; i >= 0; i--) {
+          if (desk[i] && desk[i].owner === opponent.id) {
+            prevClosestPlayerCard = i;
+            break;
+          }
+        }
+
+        setDeskDisabled(deskDisabled
+          .map((v, id) => id < prevClosestPlayerCard ? true : false)
+          .map((v, id) => id > nextClosestPlayerCard ? true : v ));
+      } else {
+      }
+
+    } else {
+      setDeskDisabled(deskDisabled.map(v => false));
+    }
+  }, [ selectedDeskCard ]);
 
   const onHandCardClick = useCallback(cardId => {
     // Unselect the current card in the hand
@@ -153,7 +195,9 @@ export default function GamePage({ player, setPlayer, connection, gameId }) {
   return (
     <div className="desk-container">
       <div className="opponent-container">
-        <PlayerStatus player={ opponent } />
+        <PlayerCards player={ opponent } />
+        <PlayerAvatar player={ player }/>
+        <PlayerHealth player={ opponent } />
       </div>
 
 
@@ -171,9 +215,11 @@ export default function GamePage({ player, setPlayer, connection, gameId }) {
                 <div className="deck-card-owner">{ ref && ref.owner === opponent.id ? deckCardOwnerOpponent : '' }</div>
                 <CardView 
                   card={ ref ? game.cards.find(c => c.id === ref.id) : undefined } 
-                  enabled={ game.isPlayerTurn(player) }
+                  enabled={ game.isPlayerTurn(player) && !deskDisabled[id] }
                   onClick={ () => onDeskCardClick(id) } 
-                  selected={ id === selectedDeskCard } />
+                  selected={ id === selectedDeskCard } 
+                  highlighted={ game.state === GameState.EXECUTION_TURN && game.executionTurnState.currentSlotId === id }
+                  />
                 <div className="deck-card-owner">{ ref && ref.owner === player.id ? deckCardOwnerPlayer : '' }</div>
               </div>
               ) 
@@ -186,7 +232,9 @@ export default function GamePage({ player, setPlayer, connection, gameId }) {
         </div>
 
         <div className="turn-button-container">
-          <button className="end-turn-button" onClick={ onCompleteTurn }><i className="bi bi-play-circle-fill"></i></button>
+          {
+            game.isPlayerTurn(player) ? <button className="end-turn-button" onClick={ onCompleteTurn }><i className="bi bi-play-circle-fill"></i></button> : undefined
+          }
         </div>
 
       </div>
@@ -194,7 +242,8 @@ export default function GamePage({ player, setPlayer, connection, gameId }) {
 
       <div className="player-container">
         <div className="player-status-container">
-          <PlayerStatus player={ player }/>
+          <PlayerAvatar player={ player }/>
+          <PlayerHealth player={ player }/>
         </div>
         <div className="card-container">
           { hand.map((ref, id) => 
@@ -206,7 +255,10 @@ export default function GamePage({ player, setPlayer, connection, gameId }) {
               selected={ id === selectedHandCard }/>)}
         </div>
         <div className="player-deck-container">
-          <CardView onClick={ onCardPull }/>
+          <CardView 
+            onClick={ onCardPull }
+            enabled={ game.isPlayerTurn(player) }
+          />
         </div>
       </div>
     </div>

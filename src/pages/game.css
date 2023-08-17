@@ -22,10 +22,12 @@ html, body {
   display: grid;
   grid-auto-flow: column;
   justify-content: center;
+  align-items: center;
   padding: 0.5rem;
   border-bottom: 4px solid black;
   box-shadow: 0px 0px 40px black;
   z-index: 2;
+  gap: 1rem;
 }
 
 .card-container {
@@ -115,8 +117,11 @@ html, body {
 
 .player-container .player-status-container {
   display: grid;
-  grid-auto-flow: column;
-  justify-content: start;
+  grid-auto-flow: row;
+  justify-content: center;
+  align-content: center;
+  justify-items: center;
+  gap: 1rem;
 }
 
 .player-container .card-container {

@@ -1,8 +1,18 @@
 
 .player-avatar {
-  background-color: white;
-  padding: 10px;
+  background-image: url("/ava.jpg");
+  background-size: contain;
   font-size: 2rem;
+
+  --size: 4rem;
+
+  min-width: var(--size);
+  min-height: var(--size);
+  max-width: var(--size);
+  max-height: var(--size);
+
+  border-radius: var(--size);
+  border: 4px solid rgba(0,0,0,0.5);
 
   display: grid;
   justify-items: center;
