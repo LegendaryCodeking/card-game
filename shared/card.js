@@ -31,7 +31,7 @@ export const Cards = [
   new Card({ 
     id: "shield", 
     icon: "shield-shaded", 
-    name: "Shield", 
+    name: "Щит", 
     description: "Создает щит который блокирует весь последующий урон.",
     action: ( actions, game, slotId, player, opponent) => {
       actions.push(Action.effectAdded(player.id, Effect.HAS_SHIELD))
@@ -42,38 +42,53 @@ export const Cards = [
   new Card({ 
     id: "arrow", 
     icon: "heart-arrow", 
-    name: "Arrow", 
+    name: "Магическая стрела", 
     description: "Наносит 3 урона сопернику.",
     action: ( actions, game, slotId, player, opponent) => {
-      dealDamage( actions, opponent, 3);
+      dealDamage( actions, player, opponent, 3);
     }
    }),
 
   new Card({ 
     id: "fireball", 
     icon: "fire", 
-    name: "Fireball", 
+    name: "Огненный шар", 
     description: "Уничтожает один щит соперника. Если щита нет, то наносит 6 урона.",
     action: ( actions, game, slotId, player, opponent ) => {
       const shieldId = opponent.effects.findIndex(e => e === Effect.HAS_SHIELD);
-      opponent.effects = opponent.effects.splice(shieldId, 1);
-
-      actions.push(Action.effectRemoved(player.id, Effect.HAS_SHIELD));
+      if (shieldId >= 0) {
+        opponent.effects = opponent.effects.splice(shieldId, 1);
+        actions.push(Action.effectRemoved(player.id, Effect.HAS_SHIELD));
+      } else {
+        dealDamage(actions, player, opponent, 6);
+      }
     }
   }),
 
   new Card({ 
     id: "reverse", 
     icon: "arrow-down-up", 
-    name: "Reverse", 
+    name: "Воровство заклинания", 
     description: "Меняет владельца следующего заклинания. Заклинание соперника станет вашим, а ваше заклинания станет заклинанием соперника." ,
     action: ( actions, game, slotId, player, opponent) => {
-      if ((slotId + 1) >= game.desk.length) return;
-      const cardRef = game.desk[slotId + 1];
-      if (!cardRef) return;
+      const [ card, id ] = game.getNextDeskCard(slotId);
+      if (!card) return;
 
-      cardRef.owner = game.getOpponent(cardRef.owner);
-      actions.push(Action.changeOwner(slotId + 1));
+      card.owner = game.getOpponent(card.owner).id;
+      actions.push(Action.changeOwner(card));
     }
   }),
+
+  new Card({
+    id: "repeat",
+    icon: "arrow-clockwise",
+    name: "Воспроизведение",
+    description: "Повторяет предыдущее заклинание от вашего имени.", 
+    action: ( actions, game, slotId, player, opponent) => {
+      const [ card, id ] = game.getPrevDeskCard(slotId);
+      if (!card) return;
+    
+      game.getCard(card).action(actions, game, id, player, opponent);
+    }
+  })
 ];

@@ -7,10 +7,7 @@ import "./game.css"
 
 export default function GamePage({ player, setPlayer, connection, gameId }) {
 
-  // Full state of the game
-  // TODO(vadim): Load the state of the game from the server
-  const [ game, setGame ] = useState(new Game({ players: [ new Player({ id: 1, name: "vadim" }), new Player({ id: 2, name: "Jack" }) ]}));
-
+  const [ game, setGame ] = useState(new Game());
   const [ opponent, setOpponent ] = useState(new Player());
 
   const [ desk, setDesk ] = useState([]);
@@ -66,7 +63,7 @@ export default function GamePage({ player, setPlayer, connection, gameId }) {
     } else {
       
       // Move our card from the desk to the hand
-      if (selectedDeskCard !== undefined && desk[selectedDeskCard].owner === playerId) {
+      if (selectedDeskCard !== undefined && desk[selectedDeskCard].owner === player.id) {
         const cardFromDesk = desk[selectedDeskCard];
         setDesk(desk.map((c, id) => id === selectedDeskCard ? undefined : c));
         setHand(hand.map((c, id) => id === cardId ? cardFromDesk : c));
@@ -174,6 +171,7 @@ export default function GamePage({ player, setPlayer, connection, gameId }) {
                 <div className="deck-card-owner">{ ref && ref.owner === opponent.id ? deckCardOwnerOpponent : '' }</div>
                 <CardView 
                   card={ ref ? game.cards.find(c => c.id === ref.id) : undefined } 
+                  enabled={ game.isPlayerTurn(player) }
                   onClick={ () => onDeskCardClick(id) } 
                   selected={ id === selectedDeskCard } />
                 <div className="deck-card-owner">{ ref && ref.owner === player.id ? deckCardOwnerPlayer : '' }</div>
@@ -203,6 +201,7 @@ export default function GamePage({ player, setPlayer, connection, gameId }) {
             <CardView 
               key={id} 
               card={ ref ? game.cards.find(c => c.id === ref.id) : undefined } 
+              enabled={ game.isPlayerTurn(player) }
               onClick={() => onHandCardClick(id) }
               selected={ id === selectedHandCard }/>)}
         </div>

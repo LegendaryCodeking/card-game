@@ -61,7 +61,7 @@ export default class Game {
   }
 
   isPlayerTurn(player) {
-    return this.turnPlayerId === player.id;
+    return this.state === GameState.PLAYER_TURN && this.turnPlayerId === player.id;
   }
 
   getPlayer(playerId) {
@@ -70,6 +70,24 @@ export default class Game {
 
   getOpponent(playerId) {
     return this.players.find(p => p.id !== playerId);
+  }
+
+  getNextDeskCard(slotId) {
+    for (let i = slotId + 1; i < this.desk.length; i++) {
+      if (this.desk[i] !== undefined) return [ this.desk[i], i ];
+    }
+    return [ undefined, undefined ];
+  }
+
+  getPrevDeskCard(slotId) {
+    for (let i = slotId - 1; i >= 0; i--) {
+      if (this.desk[i] !== undefined) return [ this.desk[i], i ];
+    }
+    return [ undefined, undefined ];
+  }
+
+  getCard(card) {
+    return this.cards.find(c => c.id === card.id);
   }
 
   /**
@@ -136,7 +154,8 @@ export default class Game {
       // Perform action for the current card
       const cardRef = this.desk[slotId];
       if (cardRef) {
-        this.cards.find(c => c.id === cardRef.id)
+        console.log(cardRef);
+        this.getCard(cardRef)
           .action(actions, this, slotId, this.getPlayer(cardRef.owner), this.getOpponent(cardRef.owner));
       }
 

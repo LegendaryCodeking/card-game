@@ -18,27 +18,42 @@
   align-content: center;
 
   box-shadow: 0px 5px 10px rgba(0,0,0,0.5);
-}
-
-.card:hover {
-  cursor: pointer;
-}
-
-.card.empty {
-  background-color: rgba(255, 255, 255, 0.75) !important;
-  background-image: none;
-  box-shadow: none !important;
-  border: 4px solid grey!important;
-}
-
-.card.empty:hover {
-  background-color: greenyellow !important;
-}
-
-.card.selected {
-  border-color: green;
+  transition: 0.2s;
 }
 
 .card .card-picture {
   font-size: 3rem;
+}
+
+.card-enabled:hover {
+  /* We should be able to click on any enabled card */
+  cursor: pointer;
+}
+
+.card-enabled.card-displayed:hover {
+  /* We should able to select any non-empty enabled card */
+  transform: scale(1.1,1.1);
+  box-shadow: 0px 5px 30px rgba(0,0,0,0.5);
+}
+
+.card-empty {
+  background-color: rgba(255, 255, 255, 0.75) !important;
+  background-image: none;
+  box-shadow: none !important;
+  border: 4px solid grey!important;
+  transition: 0s !important;
+}
+
+.card-empty.card-disabled {
+  background-color: rgba(255, 255, 255, 0.5) !important;
+}
+
+.card-enabled.card-empty:hover {
+  background-color: greenyellow !important;
+}
+
+.card-selected {
+  border-color: green;
+  transform: scale(1.1,1.1);
+  box-shadow: 0px 5px 30px rgba(0,0,0,0.5);
 }
