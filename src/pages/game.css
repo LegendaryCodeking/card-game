@@ -46,6 +46,8 @@ html, body {
 
 .card-container .event-container {
   height: 100%;
+  display: grid;
+  align-items: end;
 }
 
 .card-container .turn-button-container {
@@ -132,6 +134,7 @@ html, body {
   border-radius: 10px;
 }
 
+
 .center-container {
   height: 100%;
   display: grid;
@@ -152,14 +155,14 @@ html, body {
 
 .player-badge-container.bottom {
   display: grid;
-  grid-auto-flow: row;
+  grid-auto-flow: column;
   justify-items: center;
   align-items: end;
 }
 
 .player-badge-container.top {
   display: grid;
-  grid-auto-flow: row;
+  grid-auto-flow: column;
   justify-items: center;
   align-items: start;
 }

@@ -1,5 +1,5 @@
 import { Action } from "./action.js";
-import { Effect } from "./effect.js";
+import { EffectReference, Effects } from "./effect.js";
 
 export default class Card {
   id = "shield";
@@ -13,7 +13,6 @@ export default class Card {
   }
 }
 
-// Rename to "CardInstance"
 export class CardReference {
   constructor(id, owner) {
     this.id = id;
@@ -22,6 +21,11 @@ export class CardReference {
 }
 
 function dealDamage(actions, player, opponent, damage) {
+  if (opponent.hasEffect(Effects.HAS_SHIELD)) {
+    actions.push(Action.damageBlocked(opponent.id, player.id, damage));
+    return;
+  };
+
   actions.push(Action.damage(opponent.id, player.id, damage));
   opponent.health -= damage;
 }
@@ -34,8 +38,8 @@ export const Cards = [
     name: "Щит", 
     description: "Создает щит который блокирует весь последующий урон.",
     action: ( actions, game, slotId, player, opponent) => {
-      actions.push(Action.effectAdded(player.id, Effect.HAS_SHIELD))
-      player.effects.push(Effect.HAS_SHIELD);
+      actions.push(Action.effectAdded(player.id, Effects.HAS_SHIELD.id))
+      player.effects.push(new EffectReference(Effects.HAS_SHIELD));
     }
   }),
 
@@ -55,10 +59,10 @@ export const Cards = [
     name: "Огненный шар", 
     description: "Уничтожает один щит соперника. Если щита нет, то наносит 6 урона.",
     action: ( actions, game, slotId, player, opponent ) => {
-      const shieldId = opponent.effects.findIndex(e => e === Effect.HAS_SHIELD);
+      const shieldId = opponent.effects.findIndex(e => e.id === Effects.HAS_SHIELD.id);
       if (shieldId >= 0) {
-        opponent.effects = opponent.effects.splice(shieldId, 1);
-        actions.push(Action.effectRemoved(player.id, Effect.HAS_SHIELD));
+        opponent.effects.splice(shieldId, 1);
+        actions.push(Action.effectRemoved(player.id, Effects.HAS_SHIELD.id));
       } else {
         dealDamage(actions, player, opponent, 6);
       }
@@ -82,7 +86,7 @@ export const Cards = [
   new Card({
     id: "repeat",
     icon: "arrow-clockwise",
-    name: "Воспроизведение",
+    name: "Магический повтор",
     description: "Повторяет предыдущее заклинание от вашего имени.", 
     action: ( actions, game, slotId, player, opponent) => {
       const [ card, id ] = game.getPrevDeskCard(slotId);

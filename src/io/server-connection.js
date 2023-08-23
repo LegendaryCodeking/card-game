@@ -7,16 +7,22 @@ export default class ServerConnection {
   constructor(socket) {
     this.socket = socket;
 
+    // Define all event listeners for this connection 
+    Events.getEventListenerNames().forEach(([listenerName, event]) => {
+      this[listenerName] = (callback) => this.listeners.set(Events[event], callback);
+    });
+
+    // Call appropriate event listener on incoming message from the server
     socket.addEventListener('message', event => {
       const response = JSON.parse(event.data.toString());
-
       const listener = this.listeners.get(response.event);
       if (listener) {
         listener(response);
       } else {
         console.error(`Unknown type of the event: ${ response.event }`);
       }
-    })
+    });
+
   }
 
   static connect() {
@@ -89,20 +95,14 @@ export default class ServerConnection {
     });
   }
 
+  sendPullCard() {
+    this.send({
+      event: Events.PULL_CARD,
+    })
+  }
+
   onError(callback) {
     this.listeners.set(Events.ERROR, callback);
-  }
-
-  onFullUpdate(callback) {
-    this.listeners.set(Events.FULL_UPDATE, callback);
-  }
-
-  onPartialUpdate(callback) {
-    this.listeners.set(Events.PARTIAL_UPDATE, callback);
-  }
-
-  onGameIsFound(callback) {
-    this.listeners.set(Events.GAME_IS_FOUND, callback);
   }
 
   close() {

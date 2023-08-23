@@ -1,11 +1,16 @@
+import "./game.css"
 import { useState, useEffect, useCallback } from "react"
 import CardView from "@/components/card-view"
 import Player from "../../shared/player";
 import Game, { GameState } from "../../shared/game";
-import "./game.css"
 import PlayerHealth from "@/components/player-health";
 import PlayerCards from "@/components/player-cards";
 import PlayerAvatar from "@/components/player-avatar";
+import PlayerEffects from "@/components/player-effects";
+import ActionsView from "@/components/actions-view";
+import FullscreenLayout from "@/components/fullscreen-layout";
+import PlayerWaiting from "@/components/player-waiting";
+import CardInfo from "@/components/card-info";
 
 export default function GamePage({ player, setPlayer, connection, gameId }) {
 
@@ -14,12 +19,12 @@ export default function GamePage({ player, setPlayer, connection, gameId }) {
 
   const [ desk, setDesk ] = useState([]);
   const [ hand, setHand ] = useState([]);
+  const [ actions, setActions ] = useState([]);
 
   const [ deskDisabled, setDeskDisabled ] = useState([]);
-  const [ handDisabled, setHandDisabled ] = useState(false)
-
   const [ selectedDeskCard, setSelectedDeskCard ] = useState(undefined);
   const [ selectedHandCard, setSelectedHandCard ] = useState(undefined);
+  const [ showCardInfo, setShowCardInfo ] = useState(undefined);
 
   useEffect(() => {
     connection.sendJoinGame(gameId, player);
@@ -58,11 +63,20 @@ export default function GamePage({ player, setPlayer, connection, gameId }) {
   }, [ game.desk ])
 
   useEffect(() => {
+    // Keep only 6 latest actions
+    let newActions = actions.concat(game.actions ?? []);
+    if (newActions.length > 6) {
+      newActions.splice(0, newActions.length - 6);
+    }
+    setActions(newActions);
+  }, [ game.actions ]);
+
+  useEffect(() => {
     if (selectedDeskCard) {
       const card = desk[selectedDeskCard];
       if (card.owner !== player.id) {
         // it is not our card, so the entire hand should be disabled
-        setHandDisabled(true);
+        // setHandDisabled(true);
 
         let nextClosestPlayerCard = desk.length;
         for (let i = selectedDeskCard + 1; i < desk.length; i++) {
@@ -130,7 +144,7 @@ export default function GamePage({ player, setPlayer, connection, gameId }) {
   }, [ hand, desk, selectedHandCard, selectedDeskCard, connection ]);
 
   const onCardPull = useCallback(() => {
-    // TODO: connection.pullCard();
+    connection.sendPullCard();
   }, []);
 
   const onDeskCardClick = useCallback(cardId => {
@@ -183,17 +197,30 @@ export default function GamePage({ player, setPlayer, connection, gameId }) {
   let playerBadge = undefined;
 
   if (game.state === GameState.PLAYER_TURN) {
-    if (game.turnPlayerId === player.id) {
-      playerBadge = <div className='player-badge'>Ваш ход</div>
+    if (game.turn.playerId === player.id) {
+      playerBadge = <div className='player-badge'>{ game.turn.turns === 1 ? "Вы атакуете" : "Вы защищаетесь"}</div>
     } else {
       opponentBadge = <div className='player-badge'>Ход соперника</div>
     }
   }
 
+  const onInfo = useCallback((card) => setShowCardInfo(card), []);
+  const onCloseInfo = useCallback(() => setShowCardInfo(undefined), []);
+
+  let fullscreenLayoutComponent = undefined;
+  if (game.state === GameState.WAITING_FOR_PLAYERS) {
+    fullscreenLayoutComponent = (<PlayerWaiting />)
+  } else if (showCardInfo) {
+    fullscreenLayoutComponent = (<CardInfo card={ showCardInfo } onClose={ onCloseInfo }/>)
+  } 
+
   // TODO: Rename "card-container" to "desk-container"
   // and "desk-container" to "game-container"
   return (
     <div className="desk-container">
+
+      { fullscreenLayoutComponent ? <FullscreenLayout>{ fullscreenLayoutComponent }</FullscreenLayout> : undefined}
+
       <div className="opponent-container">
         <PlayerCards player={ opponent } />
         <PlayerAvatar player={ player }/>
@@ -202,11 +229,14 @@ export default function GamePage({ player, setPlayer, connection, gameId }) {
 
 
       <div className="card-container">
-        <div className="event-container">werew</div>
+        <div className="event-container">
+          <ActionsView actions={ actions } game={ game } />
+        </div>
 
         <div className='center-container'>
           <div className='player-badge-container top'>
             { opponentBadge }
+            { game.state === GameState.EXECUTION_TURN ? <PlayerEffects player={opponent} /> : undefined }
           </div>
 
           <div className="inner-card-container">
@@ -218,7 +248,8 @@ export default function GamePage({ player, setPlayer, connection, gameId }) {
                   enabled={ game.isPlayerTurn(player) && !deskDisabled[id] }
                   onClick={ () => onDeskCardClick(id) } 
                   selected={ id === selectedDeskCard } 
-                  highlighted={ game.state === GameState.EXECUTION_TURN && game.executionTurnState.currentSlotId === id }
+                  highlighted={ game.isSlotExecuted(id) }
+                  onInfo={ () => onInfo(game.getCard(ref)) }
                   />
                 <div className="deck-card-owner">{ ref && ref.owner === player.id ? deckCardOwnerPlayer : '' }</div>
               </div>
@@ -228,6 +259,7 @@ export default function GamePage({ player, setPlayer, connection, gameId }) {
 
           <div className='player-badge-container bottom'>
             { playerBadge }
+            { game.state === GameState.EXECUTION_TURN ? <PlayerEffects player={player} /> : undefined }
           </div>
         </div>
 
@@ -249,9 +281,10 @@ export default function GamePage({ player, setPlayer, connection, gameId }) {
           { hand.map((ref, id) => 
             <CardView 
               key={id} 
-              card={ ref ? game.cards.find(c => c.id === ref.id) : undefined } 
+              card={ ref ? game.getCard(ref) : undefined } 
               enabled={ game.isPlayerTurn(player) }
-              onClick={() => onHandCardClick(id) }
+              onClick={ () => onHandCardClick(id) }
+              onInfo={ () => onInfo(game.getCard(ref)) }
               selected={ id === selectedHandCard }/>)}
         </div>
         <div className="player-deck-container">

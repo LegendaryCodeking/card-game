@@ -1,20 +1,16 @@
 import { CardReference, Cards } from "./card.js";
 
 export const GameState = {
-
-  // Players are doing their turns
   PLAYER_TURN: "PLAYER_TURN",
-
-  // Players are waiting for game to execute the current turn
   EXECUTION_TURN: "EXECUTION_TURN",
-
-  // Game is waiting for the players
   WAITING_FOR_PLAYERS: "WAITING_FOR_PLAYERS",
+  COMPLETE: "COMPLETE",
 }
 
-export class ExecutionTurnState {
-  // Card which is currently executing
-  currentSlotId = 0;
+export class TurnState {
+  playerId = undefined;
+  turns = 0;
+  slotId = 0;
 }
 
 /**
@@ -22,20 +18,19 @@ export class ExecutionTurnState {
  */
 export default class Game {
 
-  // TODO: Move to the separate structure "Turn"
-  turnPlayerId = undefined;
-  turns = 0;
-  executionTurnState = new ExecutionTurnState();
+  // State of the current turn
+  turn = new TurnState();
 
+  // State of the game 
   state = GameState.WAITING_FOR_PLAYERS;
 
-  // Cards on the desk
+  // Game desk contains slots for cards (each indexed by slotId)
   desk = [ undefined, undefined, undefined, undefined, undefined, undefined ];
 
-  // Players participating in the game
+  // List of players participating in the game
   players = [];
 
-  // All cards which are allowed in the game
+  // All cards which are allowed in this game
   cards = Cards;
 
   constructor(data) {
@@ -53,15 +48,15 @@ export default class Game {
     this.players.push(player);
     if (this.players.length === 2) this.nextTurn();
     
-    if (this.turnPlayerId === undefined) {
-      this.turnPlayerId = player.id;
+    if (this.turn.playerId === undefined) {
+      this.turn.playerId = player.id;
     }
 
     return player;
   }
 
   isPlayerTurn(player) {
-    return this.state === GameState.PLAYER_TURN && this.turnPlayerId === player.id;
+    return this.state === GameState.PLAYER_TURN && this.turn.playerId === player.id;
   }
 
   getPlayer(playerId) {
@@ -70,6 +65,12 @@ export default class Game {
 
   getOpponent(playerId) {
     return this.players.find(p => p.id !== playerId);
+  }
+
+  getTotalPlayerCards(player) {
+    const cardsOnDesk = this.desk.filter((ref) => ref?.owner === player.id).length;
+    const cardsOnHand = player.hand.filter((ref) => ref !== undefined).length;
+    return cardsOnDesk + cardsOnHand; 
   }
 
   getNextDeskCard(slotId) {
@@ -86,14 +87,20 @@ export default class Game {
     return [ undefined, undefined ];
   }
 
-  getCard(card) {
-    return this.cards.find(c => c.id === card.id);
+  getCard(cardRef) {
+    return this.cards.find(c => c.id === cardRef.id);
+  }
+
+  isSlotExecuted(slotId) {
+    return this.state === GameState.EXECUTION_TURN && this.turn.slotId === slotId;
   }
 
   /**
    * Pulls the card for a specific player from his deck
    */
   pullCard(player) {
+    if (this.getTotalPlayerCards(player) == 6) return;
+
     // The card will be a random one
     const cardId = Math.round(Math.random() * this.cards.length) % this.cards.length;
     const availableSlot = player.hand.findIndex(cid => cid === undefined);
@@ -112,33 +119,36 @@ export default class Game {
     if (this.state === GameState.WAITING_FOR_PLAYERS) {
       // If the game has started:
       // Select the first player for the first turn
-      this.turnPlayerId = this.players[0].id;
+      this.turn.playerId = this.players[0].id;
       this.state = GameState.PLAYER_TURN;
-      this.turns += 1;
+      this.turn.turns += 1;
 
     } else if (this.state === GameState.PLAYER_TURN) {
 
-      if (this.turns >= 2) {
+      if (this.turn.turns >= 2) {
         // If it has beed 2 turns, meaning both players made their turns
         // At this point, we should start the "execution turn".
         this.state = GameState.EXECUTION_TURN;
-        this.executionTurnState = new ExecutionTurnState();
-        this.turns = 0;
+        // Select the first card for execution
+        const [ card, slotId ] = this.getNextDeskCard(-1);
+        this.turn.slotId = slotId ?? this.desk.length;
+        this.turn.turns = 0;
 
       } else {
         // If one player has made their turn, we should select the opponent
         // fot the next turn.
-        this.turnPlayerId = this.players.find(p => p.id !== this.turnPlayerId).id;
-        this.turns += 1;
+        this.turn.playerId = this.getOpponent(this.turn.playerId).id;
+        this.turn.turns += 1;
       }
 
     } else if (this.state === GameState.EXECUTION_TURN) {
     
       // if the "execution turn" is complete
-      // we will use the same player for the first turn (the last value of turnPlayerId)
+      // we will use the same player for the first turn (the last value of this.turn.playerId)
       this.state = GameState.PLAYER_TURN;
       this.desk = [undefined, undefined, undefined, undefined, undefined, undefined];
-      this.turns += 1;
+      this.players.forEach(p => p.effects = []);
+      this.turn.turns += 1;
     }
 
     console.log(`GM -> next turn: ${ this.state }`);
@@ -148,21 +158,41 @@ export default class Game {
     if (this.state === GameState.EXECUTION_TURN) {
       console.log(`GM -> perform execution turn`);
 
-      const executionState = this.executionTurnState;
-      const slotId = executionState.currentSlotId;
 
       // Perform action for the current card
-      const cardRef = this.desk[slotId];
+      const cardRef = this.desk[this.turn.slotId];
       if (cardRef) {
+        const player = this.getPlayer(cardRef.owner);
+        const opponent = this.getOpponent(cardRef.owner);
+        const slotId = this.turn.slotId;
+        
+        // Perform "pre-action" for the effects on the player
+        this.players.forEach(p => {
+          p.effects
+            .map(e => e.preAction)
+            .filter(a => a !== undefined)
+            .forEach(a => a(actions, this, slotId, player, opponent));
+        })
+
         this.getCard(cardRef)
-          .action(actions, this, slotId, this.getPlayer(cardRef.owner), this.getOpponent(cardRef.owner));
+          .action(actions, this, slotId, player, opponent);
+
+
+        // Perform "post-action" for the effects on the player
+        this.players.forEach(p => {
+          p.effects
+            .map(e => e.postAction)
+            .filter(a => a !== undefined)
+            .forEach(a => a(actions, this, slotId, player, opponent));
+        })
       }
 
       // Select the next card for the next execution
-      executionState.currentSlotId += 1;
+      const [ card, slotId ] = this.getNextDeskCard(this.turn.slotId);
+      this.turn.slotId = slotId ?? this.desk.length;
 
       // If all cards are executed, then we need to switch to the next turn
-      if (executionState.currentSlotId >= this.desk.length) {
+      if (this.turn.slotId >= this.desk.length) {
         this.nextTurn();
         return;
       }

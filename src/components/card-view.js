@@ -1,13 +1,19 @@
 import { useCallback } from "react";
 import "./card-view.css"
 
-export default function CardView({ card, selected, enabled, highlighted, onClick }) {
+export default function CardView({ card, selected, enabled, highlighted, onClick, onInfo }) {
 
   let cardPicture = undefined;
   if (card) {
     cardPicture = (
-      <div className='card-picture'>
-        <i className={`bi-${card.icon}`}></i>
+      <div className='card-inner-container'>
+        <button className='info-button' onClick={ onInfo }>
+          <i className="bi bi-info-circle"></i>
+        </button>
+        <div className='card-picture'>
+          <i className={`bi-${card.icon}`}></i>
+        </div>
+        <div className='card-title'>{ card.name }</div>
       </div>
     )
   }
@@ -23,7 +29,9 @@ export default function CardView({ card, selected, enabled, highlighted, onClick
   }, [ enabled, onClick ])
 
   return (
-    <div className={`card ${ cardEnabledClass } ${ cardEmptyClass } ${ cardSelectedClass} ${ cardHighlightedClass } `} onClick={ onCardClick }>
+    <div 
+      className={`card ${ cardEnabledClass } ${ cardEmptyClass } ${ cardSelectedClass} ${ cardHighlightedClass } `} 
+      onClick={ onCardClick } >
       { cardPicture }
     </div>
   );

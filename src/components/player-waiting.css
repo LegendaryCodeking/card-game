@@ -1,0 +1,10 @@
+.player-waiting {
+  color: white;
+  font-size: 2rem;
+  padding-block: 1rem;
+  padding-inline: 8rem;
+  border-radius: 2rem;
+
+  background-color: rgba(0,0,0,0.8);
+  box-shadow: 0px 0px 40px 40px rgba(0,0,0,0.8);
+}

@@ -28,9 +28,11 @@ export default function HomePage({ player, setPlayer, connection, onFindGame }) 
   return (
     <div className="home-page-container">
       <div className='home-control-container'>
-        <div>{ connection ? (<>Подключен к серверу</>) : (<>Не подключен</>)}</div>
-        <input ref={ playerNameInput } placeholder="Имя игрока" />
-        <button onClick={ onFindGameRequest }>Найти игру</button>
+        <div className='server-status'>{ connection ? 
+          (<><i class="bi bi-cloud-check"></i><div>Подключен к серверу</div></>) : 
+          (<><i class="bi bi-x-circle"></i><div>Нет подключения</div></>)}</div>
+        <input className='player-name-input' ref={ playerNameInput } placeholder="Имя игрока" />
+        <button className='find-game-button' onClick={ onFindGameRequest }>Найти игру</button>
       </div>
     </div>
   );

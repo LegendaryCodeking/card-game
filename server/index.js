@@ -48,7 +48,7 @@ server.on('connection', socket => {
       const playerIndex = game.players.findIndex(p => p.id === request.player.id);
 
       // If game doesn't have this player, we should add him
-      if (playerIndex < 0) game.addPlayer(request.player);
+      if (playerIndex < 0) game.addPlayer(new Player(request.player));
 
       connection.sendGameIsFound({ gameId: availableGameId });
 
@@ -58,7 +58,7 @@ server.on('connection', socket => {
       console.log("MN -> Creating new game")
       const game = new Game();
       const gameId = uuid();
-      game.addPlayer(request.player);
+      game.addPlayer(new Player(request.player));
       games.set(gameId, game);
       connection.sendGameIsFound({ gameId });
     }
@@ -70,7 +70,7 @@ server.on('connection', socket => {
    * Player joins the existing game based on gameId field.
    * We will return the entire game state.
    */
-  connection.onJoin(request => {
+  connection.onJoinGame(request => {
     // Player wants to join a new game
     const game = games.get(request.gameId);
 
@@ -111,7 +111,7 @@ server.on('connection', socket => {
     connection.sendFullUpdate(game);
 
     getPlayersConnections(game.players.filter(p => p.id !== player.id))
-      .forEach(con => con.sendPartialUpdate(game, ['players', 'state', 'turnPlayerId']));
+      .forEach(con => con.sendPartialUpdate(game, ['players', 'state', 'turn']));
   });
 
   /**
@@ -119,23 +119,37 @@ server.on('connection', socket => {
    * check if game needs to move to a new turn.
    */
   connection.onEvent(() => {
+    if (!connection.game) return;
+
     function scheduleNewTurn() {
       const game = connection.game;
-
       if (game && game.state === GameState.EXECUTION_TURN) {
         const actions = [];
         game.performExecutionTurn(actions);
         game.actions = actions;
         
         getPlayersConnections(game.players)
-          .forEach(con => con.sendPartialUpdate(game, ['actions', 'players', 'desk', 'executionTurnState', 'state']));
+          .forEach(con => con.sendPartialUpdate(game, ['actions', 'players', 'desk', 'turn', 'state']));
 
         setTimeout(() => scheduleNewTurn(), 4000);
+      } else {
+        connection.game.executionInProcess = false;
       }
     }
 
-    setTimeout(() => scheduleNewTurn(), 4000);
+    if (!connection.game.executionInProcess) {
+      console.log("MN -> Schedule execution turn")
+      connection.game.executionInProcess = true;
+      setTimeout(() => scheduleNewTurn(), 4000);
+    }
   })
+
+  connection.onPullCard(() => {
+    const game = connection.game;
+    const player = game.getPlayer(connection.player.id);
+    game.pullCard(player);
+    connection.sendPartialUpdate(game, [ 'players' ]);
+  });
 
   /**
    * Whenever the player decided to complete his turn.
@@ -148,12 +162,14 @@ server.on('connection', socket => {
     game.nextTurn();
     
     getPlayersConnections(game.players)
-      .forEach(con => con.sendPartialUpdate(game, [ 'state', 'turnPlayerId']))
+      .forEach(con => con.sendPartialUpdate(game, [ 'state', 'turn']))
   });
 
   // TODO: In listeners below we should verify if it possible for the player to do so
 
-  connection.onMoveCardFromHandToDesk((handSlotId, deskSlotId) => {
+  connection.onMoveCardFromHandToDesk(request => {
+    const handSlotId = request.handSlotId;
+    const deskSlotId = request.deskSlotId;
     // TODO: Verify that player is able to place more cards to the desk
 
     const game = connection.game;
@@ -171,7 +187,10 @@ server.on('connection', socket => {
       .forEach(con => con.sendPartialUpdate(game, ['desk']));
   });
 
-  connection.onMoveCardFromDeskToHand((deskSlotId, handSlotId) => {
+  connection.onMoveCardFromDeskToHand(request => {
+    const deskSlotId = request.deskSlotId;
+    const handSlotId = request.handSlotId;
+
     const game = connection.game;
     const player = game.getPlayer(connection.player.id);
 
@@ -191,7 +210,9 @@ server.on('connection', socket => {
       .forEach(con => con.sendPartialUpdate(game, ['desk']));
   });
 
-  connection.onMoveCardFromDeskToDesk((fromSlotId, toSlotId) => {
+  connection.onMoveCardFromDeskToDesk(request => {
+    const fromSlotId = request.fromSlotId;
+    const toSlotId = request.toSlotId;
     // TODO: Verify that order is correct when player is 
     // moving cards of his opponent
 
@@ -211,7 +232,10 @@ server.on('connection', socket => {
       .forEach(con => con.sendPartialUpdate(game, ['desk']));
   }); 
 
-  connection.onMoveCardFromHandToHand((fromSlotId, toSlotId) => {
+  connection.onMoveCardFromHandToHand(request => {
+    const fromSlotId = request.fromSlotId;
+    const toSlotId = request.toSlotId;
+
     const game = connection.game;
     const player = game.getPlayer(connection.player.id);
 
