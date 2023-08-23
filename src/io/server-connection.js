@@ -27,7 +27,7 @@ export default class ServerConnection {
 
   static connect() {
     const promise = new Promise((resolve, reject) => {
-      const socket = new WebSocket("ws://localhost:8080");
+      const socket = new WebSocket(`ws://${ process.env.NEXT_PUBLIC_SERVER_ADDRESS }:8080`);
       socket.addEventListener('open', event => {
         console.log("SC -> Connected to the game server");
         resolve(new ServerConnection(socket));
