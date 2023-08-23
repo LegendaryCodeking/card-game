@@ -73,6 +73,15 @@ export default class Game {
     return cardsOnDesk + cardsOnHand; 
   }
 
+  getTotalDeskPlayerCards(player) {
+    console.log(this.desk);
+    return this.desk.filter((ref) => ref?.owner === player.id).length;
+  }
+
+  getTotalHandPlayerCards(player) {
+    return player.hand.filter((ref) => ref !== undefined).length;
+  }
+
   getNextDeskCard(slotId) {
     for (let i = slotId + 1; i < this.desk.length; i++) {
       if (this.desk[i] !== undefined) return [ this.desk[i], i ];

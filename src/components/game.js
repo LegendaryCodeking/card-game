@@ -72,6 +72,7 @@ export default function GamePage({ player, setPlayer, connection, gameId }) {
   }, [ game.actions ]);
 
   useEffect(() => {
+    // TODO: This should be moved to a callback with onDeskCardSelect
     if (selectedDeskCard) {
       const card = desk[selectedDeskCard];
       if (card.owner !== player.id) {
@@ -98,12 +99,23 @@ export default function GamePage({ player, setPlayer, connection, gameId }) {
           .map((v, id) => id < prevClosestPlayerCard ? true : false)
           .map((v, id) => id > nextClosestPlayerCard ? true : v ));
       } else {
+        setDeskDisabled(deskDisabled.map(v => false));
+      }
+
+    } else if (selectedHandCard) {
+
+      // Don't allow the player to place more than 3 cards on the desk
+      const playerDeskCards = desk.filter(ref => ref?.owner === player.id).length;
+      if (playerDeskCards >= 3) {
+        setDeskDisabled(deskDisabled.map((v, id) => desk[id] ? false : true))
+      } else {
+        setDeskDisabled(deskDisabled.map(v => false));
       }
 
     } else {
       setDeskDisabled(deskDisabled.map(v => false));
     }
-  }, [ selectedDeskCard ]);
+  }, [ selectedDeskCard, selectedHandCard ]);
 
   const onHandCardClick = useCallback(cardId => {
     // Unselect the current card in the hand
@@ -223,7 +235,7 @@ export default function GamePage({ player, setPlayer, connection, gameId }) {
 
       <div className="opponent-container">
         <PlayerCards player={ opponent } />
-        <PlayerAvatar player={ player }/>
+        <PlayerAvatar player={ opponent }/>
         <PlayerHealth player={ opponent } />
       </div>
 

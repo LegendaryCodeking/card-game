@@ -5,8 +5,8 @@ export default function PlayerEffects({ player }) {
   return (
     <div className='player-effects-container'>
       { player.effects
-        ?.map(e => e.id === Effects.HAS_SHIELD.id ? (
-          <div className="player-effect"><i class="bi bi-shield-shaded"></i></div>) : e)
+        ?.map((e, id) => e.id === Effects.HAS_SHIELD.id ? (
+          <div className="player-effect" key={ id }><i class="bi bi-shield-shaded"></i></div>) : e)
       }
     </div>
   );

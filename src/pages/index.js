@@ -1,6 +1,6 @@
 import { useCallback, useState, useEffect } from "react"
-import GamePage from "./game"
-import HomePage from "./home"
+import GamePage from "../components/game"
+import HomePage from "../components/home"
 import Player from "../../shared/player";
 import ServerConnection from "@/io/server-connection";
 import { v4 } from "uuid";

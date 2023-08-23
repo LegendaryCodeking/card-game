@@ -2,7 +2,6 @@
 .player-avatar {
   background-image: url("/ava.jpg");
   background-size: contain;
-  font-size: 2rem;
 
   --size: 4rem;
 
@@ -17,4 +16,16 @@
   display: grid;
   justify-items: center;
   align-items: center;
+  justify-content: center;
+}
+
+.player-name {
+  position: relative;
+  background-color: white;
+  top: 2.2rem;
+  font-weight: bold;
+  padding: 0.25rem;
+  padding-inline: 1rem;
+  border-radius: 1rem;
+  border: 2px solid rgba(0,0,0,0.25);
 }
