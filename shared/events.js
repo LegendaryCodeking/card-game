@@ -1,11 +1,12 @@
 
+// TODO(vadim): In the perfect world those should be numerical values
 export const Events = {
 
   // Server events
   PARTIAL_UPDATE: "PARTIAL_UPDATE",
   FULL_UPDATE: "FULL_UPATED",
   GAME_IS_FOUND: "GAME_IS_FOUND",
-  ERROR: "ERROR",
+  SERVER_ERROR: "SERVER_ERROR",
 
   // Client events
   JOIN_GAME: "JOIN_GAME",
@@ -36,6 +37,18 @@ export const Events = {
     const result = []
     for (const event in this) {
       const eventListenerName = "on" + event.split("_")
+        .map(s => s.toLowerCase())
+        .map(s => s[0].toUpperCase() + s.slice(1, s.length))
+        .join("");
+      result.push([eventListenerName, event]);
+    }
+    return result;
+  },
+
+  getEventSendNames() {
+    const result = []
+    for (const event in this) {
+      const eventListenerName = "send" + event.split("_")
         .map(s => s.toLowerCase())
         .map(s => s[0].toUpperCase() + s.slice(1, s.length))
         .join("");

@@ -1,5 +1,5 @@
-import CardView from "./card-view";
-import './card-info.css';
+import CardView from "./CardView";
+import './CardInfo.css';
 
 export default function CardInfo({ card, onClose }) {
   return (

@@ -59,6 +59,15 @@ export default class Game {
     return this.state === GameState.PLAYER_TURN && this.turn.playerId === player.id;
   }
 
+  isWinner(player) {
+    let loser = this.players[0];
+    for (let p of this.players) {
+      if (p.health < loser.health)
+        loser = p;
+    }
+    return loser.id === player.id;
+  }
+
   getPlayer(playerId) {
     return this.players.find(p => p.id === playerId);
   }
@@ -111,6 +120,7 @@ export default class Game {
     if (this.getTotalPlayerCards(player) == 6) return;
 
     // The card will be a random one
+    // TODO(vadim): Do randomness better
     const cardId = Math.round(Math.random() * this.cards.length) % this.cards.length;
     const availableSlot = player.hand.findIndex(cid => cid === undefined);
     if (availableSlot >= 0) {
@@ -151,16 +161,26 @@ export default class Game {
       }
 
     } else if (this.state === GameState.EXECUTION_TURN) {
-    
-      // if the "execution turn" is complete
-      // we will use the same player for the first turn (the last value of this.turn.playerId)
-      this.state = GameState.PLAYER_TURN;
-      this.desk = [undefined, undefined, undefined, undefined, undefined, undefined];
-      this.players.forEach(p => p.effects = []);
-      this.turn.turns += 1;
+
+      const deadPlayer = this.players.find(p => p.health <= 0);
+      if (deadPlayer) {
+        this.completeGame();
+      } else {
+        // if the "execution turn" is complete
+        // we will use the same player for the first turn (the last value of this.turn.playerId)
+        this.state = GameState.PLAYER_TURN;
+        this.desk = [undefined, undefined, undefined, undefined, undefined, undefined];
+        this.players.forEach(p => p.effects = []);
+        this.turn.turns += 1;
+      }
     }
 
     console.log(`GM -> next turn: ${ this.state }`);
+  }
+
+  completeGame() {
+    console.log("GM -> game complete");
+    this.state = GameState.COMPLETE;
   }
 
   performExecutionTurn(actions) {
@@ -208,6 +228,12 @@ export default class Game {
     }
   }
 
+  /**
+   * Creates a new game object with the same data, and then updates
+   * it with a new data provided in the arguments.
+
+   * @returns new game object
+   */
   update(data) {
     let game = new Game(this);
     Object.assign(game, data);

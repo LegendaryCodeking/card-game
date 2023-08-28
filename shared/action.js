@@ -7,7 +7,7 @@ export const ActionType = {
   DAMAGE_BLOCKED: "DAMAGE_BLOCKED",
 }
 
-// TODO: Rename to "Actions"
+// TODO(vadim): Rename to "Actions"
 export class Action {
 
   constructor(props) {

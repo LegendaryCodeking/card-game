@@ -1,5 +1,5 @@
 
-// TODO: Rename to "Errors"
+// TODO(vadim): Rename to "Errors"
 export const Error = {
   GAME_IS_NOT_FOUND: 'GAME_IS_NOT_FOUND',
   GAME_IS_FULL: "GAME_IS_FULL",

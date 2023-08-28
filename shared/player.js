@@ -1,9 +1,9 @@
 
-// TODO: Use this
+// TODO(vadim): Use this class to represent instance of the player in the game
 export class PlayerReference {
   id = 0;
 
-  health = 30;
+  health = 50;
   hand = [];
   pullSize = 0;
   effects = [];
@@ -16,7 +16,7 @@ export default class Player {
   name = "player";
 
   // Game related properties
-  health = 30;
+  health = 50;
   hand = [];
   pullSize = 0;
   effects = [];

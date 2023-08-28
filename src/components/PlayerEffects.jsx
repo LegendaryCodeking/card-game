@@ -1,5 +1,5 @@
 import { Effects } from "../../shared/effect";
-import "./player-effects.css"
+import "./PlayerEffects.css"
 
 export default function PlayerEffects({ player }) {
   return (

@@ -1,9 +1,9 @@
 import { WebSocketServer } from "ws";
-import Game, { GameState } from "../shared/game.js";
-import ClientConnection from "./io/client-connection.js";
-import { Error } from "../shared/error.js";
+import Game, { GameState } from "../../shared/Game.js";
+import ClientConnection from "./io/ClientConnection.js";
+import Player from "../../shared/Player.js";
+import { Error } from "../../shared/error.js";
 import { v4 as uuid } from "uuid";
-import Player from "../shared/player.js";
 
 const server = new WebSocketServer({ port: 8080 });
 
@@ -35,7 +35,7 @@ server.on('connection', socket => {
   connection.onFindGame(request => {
 
     // Go through all games to find any available one
-    // TODO(vadim): Optimize this part
+    // TODO(vadim): O(N)! Should be O(1)
     let availableGameId = undefined;
     for (const [id, game] of games) {
       if (game.players.length < 2) availableGameId = id;
@@ -126,12 +126,11 @@ server.on('connection', socket => {
       if (game && game.state === GameState.EXECUTION_TURN) {
         const actions = [];
         game.performExecutionTurn(actions);
+
         game.actions = actions;
-        
         getPlayersConnections(game.players)
           .forEach(con => con.sendPartialUpdate(game, ['actions', 'players', 'desk', 'turn', 'state']));
-
-        setTimeout(() => scheduleNewTurn(), 4000);
+        setTimeout(() => scheduleNewTurn(), 3000);
       } else {
         connection.game.executionInProcess = false;
       }
@@ -140,7 +139,7 @@ server.on('connection', socket => {
     if (!connection.game.executionInProcess) {
       console.log("MN -> Schedule execution turn")
       connection.game.executionInProcess = true;
-      setTimeout(() => scheduleNewTurn(), 4000);
+      setTimeout(() => scheduleNewTurn(), 3000);
     }
   })
 
@@ -165,12 +164,9 @@ server.on('connection', socket => {
       .forEach(con => con.sendPartialUpdate(game, [ 'state', 'turn']))
   });
 
-  // TODO: In listeners below we should verify if it possible for the player to do so
-
   connection.onMoveCardFromHandToDesk(request => {
     const handSlotId = request.handSlotId;
     const deskSlotId = request.deskSlotId;
-    // TODO: Verify that player is able to place more cards to the desk
 
     const game = connection.game;
     const player = game.getPlayer(connection.player.id);
@@ -213,13 +209,13 @@ server.on('connection', socket => {
   connection.onMoveCardFromDeskToDesk(request => {
     const fromSlotId = request.fromSlotId;
     const toSlotId = request.toSlotId;
-    // TODO: Verify that order is correct when player is 
-    // moving cards of his opponent
 
     const game = connection.game;
     const player = game.getPlayer(connection.player.id);
 
     if (!game.isPlayerTurn(player)) return;
+
+    // TODO(vadim): Verify order of the cards
     
     // Move the card
     const cardRef = game.desk[fromSlotId];

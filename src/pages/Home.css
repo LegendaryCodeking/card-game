@@ -1,0 +1,51 @@
+
+.home-page {
+  display: grid;
+  height: 100%;
+  width: 100%;
+  align-content: center;
+  justify-content: center;
+
+  .main-menu {
+    padding: 2rem;
+    border: 1px solid rgba(0,0,0,0.1);
+    border-radius: 1rem;
+    display: grid;
+    grid-auto-flow: row;
+    gap: 1rem;
+    box-shadow: 0px 10px 40px rgba(80, 100, 120, 0.25);
+
+    .server-status {
+      padding-bottom: 0.5rem;
+      display: grid;
+      grid-auto-flow: column;
+      .bi { font-size: 1.2rem; }
+    }
+
+    .find-game-button {
+      padding: 0.5rem;
+      padding-inline: 1rem;
+      border-radius: 1rem;
+      background-color: white;
+      border: 1px solid grey;
+      font-size: 1rem;
+    }
+
+    .find-game-button:hover {
+      cursor: pointer;
+      background-color: rgba(230,230,230,1);
+    }
+
+    .player-name-input {
+      padding: 0.5rem;
+      padding-inline: 1rem;
+      border-radius: 1rem;
+      border: 1px solid grey;
+      font-size: 1rem;
+    }
+  }
+}
+
+
+
+

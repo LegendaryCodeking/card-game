@@ -1,16 +1,18 @@
-import "./game.css"
+import "./Game.css"
 import { useState, useEffect, useCallback } from "react"
-import CardView from "@/components/card-view"
-import Player from "../../shared/player";
-import Game, { GameState } from "../../shared/game";
-import PlayerHealth from "@/components/player-health";
-import PlayerCards from "@/components/player-cards";
-import PlayerAvatar from "@/components/player-avatar";
-import PlayerEffects from "@/components/player-effects";
-import ActionsView from "@/components/actions-view";
-import FullscreenLayout from "@/components/fullscreen-layout";
-import PlayerWaiting from "@/components/player-waiting";
-import CardInfo from "@/components/card-info";
+import CardView from "../components/CardView"
+import Player from "../../shared/Player";
+import Game, { GameState } from "../../shared/Game";
+import PlayerHealth from "../components/PlayerHealth";
+import PlayerCards from "../components/PlayerCards";
+import PlayerAvatar from "../components/PlayerAvatar";
+import PlayerEffects from "../components/PlayerEffects";
+import ActionsView from "../components/ActionView";
+import FullscreenLayout from "../components/FullscreenLayout";
+import PlayerWaiting from "../components/PlayerWaiting";
+import CardInfo from "../components/CardInfo";
+import { useGameSession } from "../io/GameSession";
+import GameComplete from "../components/GameComplete";
 
 export default function GamePage({ player, setPlayer, connection, gameId }) {
 
@@ -26,27 +28,10 @@ export default function GamePage({ player, setPlayer, connection, gameId }) {
   const [ selectedHandCard, setSelectedHandCard ] = useState(undefined);
   const [ showCardInfo, setShowCardInfo ] = useState(undefined);
 
-  useEffect(() => {
-    connection.sendJoinGame(gameId, player);
-
-    connection.onFullUpdate(response => {
-      console.log("SC -> Full update")
-      setGame((game) => game.update(response.data));
-    });
-
-    connection.onPartialUpdate(response => {
-      console.log("SC -> Partial update");
-      setGame((game) => game.update(response.data));
-    });
-
-    connection.onError(response => {
-      console.error(`SC -> ${ response.data }`);
-    });
-
-    return () => {
-      // TODO(vadim): Remove listeners
-    }
-  }, [])
+  const gameSession = useGameSession(connection, player, gameId, {
+    onFullUpdate: response => setGame(g => g.update(response.data)),
+    onPartialUpdate: response => setGame(g => g.update(response.data)),
+  });
 
   useEffect(() => {
     // Whenever the game is updated, we should updated players
@@ -72,8 +57,8 @@ export default function GamePage({ player, setPlayer, connection, gameId }) {
   }, [ game.actions ]);
 
   useEffect(() => {
-    // TODO: This should be moved to a callback with onDeskCardSelect
-    if (selectedDeskCard) {
+    // TODO(vadim): This should be moved to a callback with onDeskCardSelect
+    if (selectedDeskCard !== undefined) {
       const card = desk[selectedDeskCard];
       if (card.owner !== player.id) {
         // it is not our card, so the entire hand should be disabled
@@ -102,7 +87,7 @@ export default function GamePage({ player, setPlayer, connection, gameId }) {
         setDeskDisabled(deskDisabled.map(v => false));
       }
 
-    } else if (selectedHandCard) {
+    } else if (selectedHandCard !== undefined) {
 
       // Don't allow the player to place more than 3 cards on the desk
       const playerDeskCards = desk.filter(ref => ref?.owner === player.id).length;
@@ -135,7 +120,7 @@ export default function GamePage({ player, setPlayer, connection, gameId }) {
         const cardFromDesk = desk[selectedDeskCard];
         setDesk(desk.map((c, id) => id === selectedDeskCard ? undefined : c));
         setHand(hand.map((c, id) => id === cardId ? cardFromDesk : c));
-        connection.moveCardFromDeskToHand(selectedDeskCard, cardId);
+        gameSession.moveCardFromDeskToHand(selectedDeskCard, cardId);
         setSelectedHandCard(undefined);
         setSelectedDeskCard(undefined);
         return;
@@ -147,17 +132,13 @@ export default function GamePage({ player, setPlayer, connection, gameId }) {
         setHand(hand
           .map((c, id) => id === cardId ? cardFromHand : c)
           .map((c, id) => id === selectedHandCard ? undefined : c));
-        connection.moveCardFromHandToHand(selectedHandCard, cardId);
+        gameSession.moveCardFromHandToHand(selectedHandCard, cardId);
         setSelectedDeskCard(undefined);
         setSelectedHandCard(undefined);
       }
 
     }
   }, [ hand, desk, selectedHandCard, selectedDeskCard, connection ]);
-
-  const onCardPull = useCallback(() => {
-    connection.sendPullCard();
-  }, []);
 
   const onDeskCardClick = useCallback(cardId => {
     // Unselect the current card on the desk
@@ -178,7 +159,7 @@ export default function GamePage({ player, setPlayer, connection, gameId }) {
         const cardFromHand = hand[selectedHandCard];
         setDesk(desk.map((c, id) => id === cardId ? cardFromHand : c ));
         setHand(hand.map((c, id) => id === selectedHandCard ? undefined : c ));
-        connection.moveCardFromHandToDesk(selectedHandCard, cardId);
+        connection.sendMoveCardFromHandToDesk(selectedHandCard, cardId);
         setSelectedHandCard(undefined);
         setSelectedDeskCard(undefined);
         return;
@@ -190,17 +171,13 @@ export default function GamePage({ player, setPlayer, connection, gameId }) {
         setDesk(desk
           .map((c, id) => id === selectedDeskCard ? undefined : c)
           .map((c, id) => id === cardId ? cardFromDesk: c));
-        connection.moveCardFromDeskToDesk(selectedDeskCard, cardId);
+        connection.sendMoveCardFromDeskToDesk(selectedDeskCard, cardId);
         setSelectedDeskCard(undefined);
         setSelectedHandCard(undefined);
       } 
     }
 
   }, [ hand, desk, selectedHandCard, selectedDeskCard, connection ]);
-
-  const onCompleteTurn = useCallback(() => {
-    connection.sendCompleteTurn();
-  }, []);
 
   const deckCardOwnerOpponent = <div className='deck-card-owner-opponent'>{ opponent.name }</div>
   const deckCardOwnerPlayer = <div className='deck-card-owner-player'>{ player.name }</div>
@@ -222,11 +199,13 @@ export default function GamePage({ player, setPlayer, connection, gameId }) {
   let fullscreenLayoutComponent = undefined;
   if (game.state === GameState.WAITING_FOR_PLAYERS) {
     fullscreenLayoutComponent = (<PlayerWaiting />)
+  } else if (game.state === GameState.COMPLETE) {
+    fullscreenLayoutComponent = (<GameComplete game={ game } player={ player }/>);
   } else if (showCardInfo) {
     fullscreenLayoutComponent = (<CardInfo card={ showCardInfo } onClose={ onCloseInfo }/>)
   } 
 
-  // TODO: Rename "card-container" to "desk-container"
+  // TODO(vadim): Rename "card-container" to "desk-container"
   // and "desk-container" to "game-container"
   return (
     <div className="desk-container">
@@ -277,7 +256,10 @@ export default function GamePage({ player, setPlayer, connection, gameId }) {
 
         <div className="turn-button-container">
           {
-            game.isPlayerTurn(player) ? <button className="end-turn-button" onClick={ onCompleteTurn }><i className="bi bi-play-circle-fill"></i></button> : undefined
+            game.isPlayerTurn(player) ? <button 
+              className="end-turn-button" 
+              onClick={ gameSession.completeTurn }>
+                <i className="bi bi-play-circle-fill"></i></button> : undefined
           }
         </div>
 
@@ -301,7 +283,7 @@ export default function GamePage({ player, setPlayer, connection, gameId }) {
         </div>
         <div className="player-deck-container">
           <CardView 
-            onClick={ onCardPull }
+            onClick={ gameSession.pullCard }
             enabled={ game.isPlayerTurn(player) }
           />
         </div>

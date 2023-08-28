@@ -1,4 +1,4 @@
-import './player-waiting.css'
+import './PlayerWaiting.css'
 
 export default function PlayerWaiting() {
   return (

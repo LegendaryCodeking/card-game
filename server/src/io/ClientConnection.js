@@ -1,20 +1,14 @@
-import { Events } from "../../shared/events.js";
-import { Error } from "../../shared/error.js";
+import { Events } from "../../../shared/Events.js";
+import { Error } from "../../../shared/error.js";
+import Connection from "../../../shared/io/Connection.js";
 
-export default class ClientConnection {
-
-  listeners = new Map();
+export default class ClientConnection extends Connection {
 
   player = undefined;
   game = undefined;
 
   constructor(socket) {
-    this.socket = socket;
-
-    // Add listeners setters for all type of events
-    Events.getEventListenerNames().forEach(([listenerName, event]) => {
-      this[listenerName] = (callback) => this.listeners.set(Events[event], callback);
-    });
+    super(socket);
 
     // Set listener for all incoming messages
     socket.on('message', data => {
@@ -34,12 +28,20 @@ export default class ClientConnection {
     // Define behavour on close
     socket.on('close', () => {
       console.log(`CC -> Close connection for ${ this.player?.name }`)
-      this.onClose()
+      if (this.onCloseListener)
+        this.onCloseListener()
     });
-  }
 
-  close() {
-    this.socket.close();
+    socket.on('error', () => {
+      console.log(`CC -> Error from ${ this.player?.name }`);
+      if (this.onErrorListener)
+        this.onErrorListener();
+    })
+
+    socket.on('open', () => {
+      if (this.onOpenListener)
+        this.onOpenListener();
+    });
   }
 
   sendPartialUpdate(game, properties) {
@@ -75,16 +77,8 @@ export default class ClientConnection {
     });
   }
 
-  onClose(callback) {
-    this.onClose = callback;
-  } 
-
   onEvent(callback) {
     this.onEvent = callback;
-  }
-
-  send(object) {
-    this.socket.send(JSON.stringify(object));
   }
 
 }

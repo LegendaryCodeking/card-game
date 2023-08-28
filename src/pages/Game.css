@@ -17,7 +17,7 @@ html, body {
   min-height: 100%;
 }
 
-/* TODO: Rename to enemy-player container */
+/* TODO(vadim): Rename to enemy-player container */
 .opponent-container {
   display: grid;
   grid-auto-flow: column;

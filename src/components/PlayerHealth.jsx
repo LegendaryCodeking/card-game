@@ -1,4 +1,4 @@
-import "./player-health.css"
+import "./PlayerHealth.css"
 
 export default function PlayerHealth({ player }) {
   return (

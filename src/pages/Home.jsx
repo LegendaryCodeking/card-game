@@ -1,12 +1,10 @@
 import { useCallback, useRef } from "react";
-import Player from "../../shared/player";
-import "./home.css"
+import Player from "../../shared/Player";
+import "./Home.css"
 
-export default function HomePage({ player, setPlayer, connection, onFindGame }) {
+export default function HomePage({ player, setPlayer, connection }) {
 
   const playerNameInput = useRef(undefined);
-
-  // TODO: Naming here is horrible
 
   const onFindGameRequest = useCallback(() => {
     // Check if the player is valid
@@ -19,21 +17,20 @@ export default function HomePage({ player, setPlayer, connection, onFindGame }) 
 
       // Request server to find a game
       connection.sendFindGame(updatedPlayer);
-
-      // Notify parent element about this
-      onFindGame();
     }
   }, [ connection, player ])
 
   return (
-    <div className="home-page-container">
-      <div className='home-control-container'>
+    <div className="home-page">
+
+      <div className='main-menu'>
         <div className='server-status'>{ connection ? 
-          (<><i class="bi bi-cloud-check"></i><div>Подключен к серверу</div></>) : 
-          (<><i class="bi bi-x-circle"></i><div>Нет подключения</div></>)}</div>
+          (<><i className="bi bi-cloud-check"></i><div>Подключен к серверу</div></>) : 
+          (<><i className="bi bi-x-circle"></i><div>Нет подключения</div></>)}</div>
         <input className='player-name-input' ref={ playerNameInput } placeholder="Имя игрока" />
         <button className='find-game-button' onClick={ onFindGameRequest }>Найти игру</button>
       </div>
+
     </div>
   );
 }

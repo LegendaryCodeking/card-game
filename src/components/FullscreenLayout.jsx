@@ -1,5 +1,5 @@
 import { Children } from 'react'
-import './fullscreen-layout.css'
+import './FullscreenLayout.css'
 
 export default function FullscreenLayout({ children }) {
   return (

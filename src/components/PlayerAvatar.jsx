@@ -1,4 +1,4 @@
-import './player-avatar.css';
+import './PlayerAvatar.css';
 
 export default function PlayerAvatar({ player }) {
   return (

@@ -1,4 +1,4 @@
-import './player-cards.css'
+import './PlayerCards.css'
 
 export default function PlayerCards({ player }) {
   return (

@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import "./card-view.css"
+import "./CardView.css"
 
 export default function CardView({ card, selected, enabled, highlighted, onClick, onInfo }) {
 
