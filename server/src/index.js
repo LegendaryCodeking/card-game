@@ -1,8 +1,8 @@
 import { WebSocketServer } from "ws";
-import Game, { GameState } from "../../shared/Game.js";
+import Game, { GameState } from "../../core/Game.js";
 import ClientConnection from "./io/ClientConnection.js";
-import Player from "../../shared/Player.js";
-import { Error } from "../../shared/error.js";
+import Player from "../../core/Player.js";
+import { Error } from "../../core/error.js";
 import { v4 as uuid } from "uuid";
 
 const server = new WebSocketServer({ port: 8080 });

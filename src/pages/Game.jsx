@@ -1,8 +1,8 @@
 import "./Game.css"
 import { useState, useEffect, useCallback } from "react"
 import CardView from "../components/CardView"
-import Player from "../../shared/Player";
-import Game, { GameState } from "../../shared/Game";
+import Player from "../../core/Player";
+import Game, { GameState } from "../../core/Game";
 import PlayerHealth from "../components/PlayerHealth";
 import PlayerCards from "../components/PlayerCards";
 import PlayerAvatar from "../components/PlayerAvatar";

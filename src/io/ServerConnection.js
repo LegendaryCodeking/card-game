@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { Events } from "../../shared/Events";
-import Connection from "../../shared/io/Connection";
+import { Events } from "../../core/Events";
+import Connection from "../../core/io/Connection";
 
 export default class ServerConnection extends Connection {
 

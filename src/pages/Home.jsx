@@ -1,5 +1,5 @@
 import { useCallback, useRef } from "react";
-import Player from "../../shared/Player";
+import Player from "../../core/Player";
 import "./Home.css"
 
 export default function HomePage({ player, setPlayer, connection }) {

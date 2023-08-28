@@ -1,5 +1,5 @@
-import { ActionType } from "../../shared/action";
-import { Effects } from "../../shared/effect";
+import { ActionType } from "../../core/action";
+import { Effects } from "../../core/effect";
 import "./ActionView.css"
 
 export default function ActionsView({ actions, game }) {

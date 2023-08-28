@@ -1,6 +1,6 @@
-import { Events } from "../../../shared/Events.js";
-import { Error } from "../../../shared/error.js";
-import Connection from "../../../shared/io/Connection.js";
+import { Events } from "../../../core/Events.js";
+import { Error } from "../../../core/error.js";
+import Connection from "../../../core/io/Connection.js";
 
 export default class ClientConnection extends Connection {
 

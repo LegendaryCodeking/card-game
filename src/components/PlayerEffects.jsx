@@ -1,4 +1,4 @@
-import { Effects } from "../../shared/effect";
+import { Effects } from "../../core/effect";
 import "./PlayerEffects.css"
 
 export default function PlayerEffects({ player }) {

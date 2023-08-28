@@ -1,7 +1,7 @@
 import { useState } from "react"
 import GamePage from "./Game"
 import HomePage from "./Home"
-import Player from "../../shared/Player";
+import Player from "../../core/Player";
 import { useServerConnection } from "../io/ServerConnection";
 import { v4 } from "uuid";
 
