@@ -65,7 +65,7 @@ export default class Game {
       if (p.health < loser.health)
         loser = p;
     }
-    return loser.id === player.id;
+    return loser.id !== player.id;
   }
 
   getPlayer(playerId) {

@@ -1,5 +1,5 @@
 import { Events } from "../../../core/Events.js";
-import { Error } from "../../../core/error.js";
+import { Errors } from "../../../core/Errors.js";
 import Connection from "../../../core/io/Connection.js";
 
 export default class ClientConnection extends Connection {
@@ -21,7 +21,7 @@ export default class ClientConnection extends Connection {
         listener(request);
       } else {
         console.error(`CC -> Unknown event ${ request.event } from ${ this.player?.name }`)
-        this.sendError(Error.UNKNOWN_EVENT);
+        this.sendError(Errors.UNKNOWN_EVENT);
       }
     });
 

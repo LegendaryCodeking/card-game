@@ -1,5 +1,5 @@
 
-export const ActionType = {
+export const Actions = {
   DAMAGE: "DAMAGE",
   EFFECT_ADDED: "EFFECT_ADDED",
   EFFECT_REMOVED: "EFFECT_REMOVED",
@@ -7,7 +7,6 @@ export const ActionType = {
   DAMAGE_BLOCKED: "DAMAGE_BLOCKED",
 }
 
-// TODO(vadim): Rename to "Actions"
 export class Action {
 
   constructor(props) {
@@ -16,22 +15,22 @@ export class Action {
 
   static damage(target, source, damage) {
     return new Action({ 
-      type: ActionType.DAMAGE, target, source, damage })
+      type: Actions.DAMAGE, target, source, damage })
   }
 
   static damageBlocked(target, source, damage) {
-    return new Action({ type: ActionType.DAMAGE_BLOCKED, target, source, damage });
+    return new Action({ type: Actions.DAMAGE_BLOCKED, target, source, damage });
   }
 
   static effectAdded(target, effectId) {
-    return new Action({ type: ActionType.EFFECT_ADDED, target, effectId });
+    return new Action({ type: Actions.EFFECT_ADDED, target, effectId });
   }
 
   static effectRemoved(target, effectId) {
-    return new Action({ type: ActionType.EFFECT_REMOVED, target, effectId });
+    return new Action({ type: Actions.EFFECT_REMOVED, target, effectId });
   }
 
   static changeOwner(target) {
-    return new Action({ type: ActionType.CHANGE_OWNER, target });
+    return new Action({ type: Actions.CHANGE_OWNER, target });
   }
 }

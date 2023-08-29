@@ -2,7 +2,7 @@ import { WebSocketServer } from "ws";
 import Game, { GameState } from "../../core/Game.js";
 import ClientConnection from "./io/ClientConnection.js";
 import Player from "../../core/Player.js";
-import { Error } from "../../core/error.js";
+import { Errors } from "../../core/Errors.js";
 import { v4 as uuid } from "uuid";
 
 const server = new WebSocketServer({ port: 8080 });
@@ -75,12 +75,12 @@ server.on('connection', socket => {
     const game = games.get(request.gameId);
 
     if (!game) {
-      connection.sendError(Error.GAME_IS_NOT_FOUND);
+      connection.sendError(Errors.GAME_IS_NOT_FOUND);
       return;
     }
 
     if (!game.state === GameState.WAITING_FOR_PLAYERS) {
-      connection.sendError(Error.GAME_IS_FULL);
+      connection.sendError(Errors.GAME_IS_FULL);
       return;
     }
 

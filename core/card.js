@@ -1,4 +1,4 @@
-import { Action } from "./action.js";
+import { Action } from "./Actions.js";
 import { EffectReference, Effects } from "./effect.js";
 
 export default class Card {

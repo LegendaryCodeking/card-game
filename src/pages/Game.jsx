@@ -1,6 +1,6 @@
 import "./Game.css"
 import { useState, useEffect, useCallback } from "react"
-import CardView from "../components/CardView"
+import CardView from "../components/card/CardView"
 import Player from "../../core/Player";
 import Game, { GameState } from "../../core/Game";
 import PlayerHealth from "../components/PlayerHealth";
@@ -47,12 +47,18 @@ export default function GamePage({ player, setPlayer, connection, gameId }) {
     setDeskDisabled(game.desk.map(r => false));
   }, [ game.desk ])
 
+  const [ actionsOffset, setActionsOffset ] = useState(0);
   useEffect(() => {
-    // Keep only 6 latest actions
-    let newActions = actions.concat(game.actions ?? []);
+    let newActions = (game.actions ?? [])
+      .map((a, id) => { return { id: id + actionsOffset , ...a }});
+    setActionsOffset(actionsOffset + newActions.length);
+    newActions = actions.concat(newActions);
+
     if (newActions.length > 6) {
       newActions.splice(0, newActions.length - 6);
     }
+  
+    console.log(newActions);
     setActions(newActions);
   }, [ game.actions ]);
 
@@ -233,7 +239,6 @@ export default function GamePage({ player, setPlayer, connection, gameId }) {
           <div className="inner-card-container">
             { desk.map((ref, id) => 
               <div className="deck-card-container" key={id}>
-                <div className="deck-card-owner">{ ref && ref.owner === opponent.id ? deckCardOwnerOpponent : '' }</div>
                 <CardView 
                   card={ ref ? game.cards.find(c => c.id === ref.id) : undefined } 
                   enabled={ game.isPlayerTurn(player) && !deskDisabled[id] }
@@ -242,7 +247,8 @@ export default function GamePage({ player, setPlayer, connection, gameId }) {
                   highlighted={ game.isSlotExecuted(id) }
                   onInfo={ () => onInfo(game.getCard(ref)) }
                   />
-                <div className="deck-card-owner">{ ref && ref.owner === player.id ? deckCardOwnerPlayer : '' }</div>
+                { ref && ref.owner === opponent.id ? <div className='deck-card-owner'>{deckCardOwnerOpponent}</div> : undefined }
+                { ref && ref.owner === player.id ? <div className='deck-card-owner'>{deckCardOwnerPlayer}</div> : undefined }
               </div>
               ) 
             }

@@ -1,4 +1,4 @@
-import { ActionType } from "../../core/action";
+import { Actions } from "../../core/Actions";
 import { Effects } from "../../core/effect";
 import "./ActionView.css"
 
@@ -8,49 +8,47 @@ export default function ActionsView({ actions, game }) {
     const players = game.players;
     const opponent = players.find(p => p.id === action.target);
 
-    if (!opponent) return undefined;
-
-    if (action.type === ActionType.DAMAGE) {
+    if (action.type === Actions.DAMAGE) {
       return (
-        <div key={id} className="action danger">
+        <div key={action.id} className="action danger">
           <div><i class="bi bi-heartbreak"></i></div>
           <div><b>{ opponent.name }</b> { action.damage } урона</div>
         </div>
       );
     }
 
-    if (action.type === ActionType.CHANGE_OWNER) {
+    if (action.type === Actions.CHANGE_OWNER) {
       return (
-        <div key={id} className="action">
+        <div key={action.id} className="action">
           <div><i class="bi bi-arrow-down-up"></i></div>
           <div>Следующее заклинение сменило владельца</div>
         </div>
-      )
+      );
     }
 
-    if (action.type === ActionType.DAMAGE_BLOCKED) {
+    if (action.type === Actions.DAMAGE_BLOCKED) {
       return (
-        <div key={id} className="action danger">
+        <div key={action.id} className="action danger">
           <div><i class="bi bi-shield"></i></div>
           <div><b>{ opponent.name }</b> блокирует { action.damage } урона</div>
         </div>
       );
     }
 
-    if (action.type === ActionType.EFFECT_ADDED) {
+    if (action.type === Actions.EFFECT_ADDED) {
       const effectName = Effects.getEffectById(action.effectId).name;
       return (
-        <div key={id} className="action danger">
+        <div key={action.id} className="action danger">
           <div><i class="bi bi-plus-circle"></i></div>
           <div><b>{ opponent.name }</b> получает "{ effectName }"</div>
         </div>
       )
     }
 
-    if (action.type === ActionType.EFFECT_REMOVED) {
+    if (action.type === Actions.EFFECT_REMOVED) {
       const effectName = Effects.getEffectById(action.effectId).name;
       return (
-        <div key={id} className="action danger">
+        <div key={action.id} className="action danger">
           <div><i class="bi bi-plus-circle"></i></div>
           <div><b>{ opponent.name }</b> теряет "{ effectName }"</div>
         </div>
