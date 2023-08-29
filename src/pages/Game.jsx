@@ -13,6 +13,7 @@ import PlayerWaiting from "../components/PlayerWaiting";
 import CardInfo from "../components/CardInfo";
 import { useGameSession } from "../io/GameSession";
 import GameComplete from "../components/GameComplete";
+import CardDeskSlot from "../components/card/CardDeskSlot";
 
 export default function GamePage({ player, setPlayer, connection, gameId }) {
 
@@ -238,7 +239,12 @@ export default function GamePage({ player, setPlayer, connection, gameId }) {
 
           <div className="inner-card-container">
             { desk.map((ref, id) => 
-              <div className="deck-card-container" key={id}>
+              <CardDeskSlot key={id} 
+                owner={ ref ? { 
+                  name: game.getPlayer(ref.owner).name, 
+                  opponent: game.getPlayer(ref.owner).id !== player.id
+                } : undefined }
+                >
                 <CardView 
                   card={ ref ? game.cards.find(c => c.id === ref.id) : undefined } 
                   enabled={ game.isPlayerTurn(player) && !deskDisabled[id] }
@@ -246,10 +252,8 @@ export default function GamePage({ player, setPlayer, connection, gameId }) {
                   selected={ id === selectedDeskCard } 
                   highlighted={ game.isSlotExecuted(id) }
                   onInfo={ () => onInfo(game.getCard(ref)) }
-                  />
-                { ref && ref.owner === opponent.id ? <div className='deck-card-owner'>{deckCardOwnerOpponent}</div> : undefined }
-                { ref && ref.owner === player.id ? <div className='deck-card-owner'>{deckCardOwnerPlayer}</div> : undefined }
-              </div>
+                />
+              </CardDeskSlot>
               ) 
             }
           </div>

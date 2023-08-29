@@ -1,0 +1,50 @@
+
+.CardDeskSlot {
+  display: grid;
+  grid-template-rows: 2rem auto 2rem;
+
+  .Effects {
+    display: grid;
+    grid-auto-flow: column;
+    justify-content: center;
+    align-content: center;
+    gap: 0.5rem;
+
+    .Effect {
+      --effect-size: 1.2rem;
+
+      background-color: white;
+      max-width: var(--effect-size);
+      max-height: var(--effect-size);
+      min-width: var(--effect-size);
+      min-height: var(--effect-size);
+      border-radius: var(--effect-size);
+    }
+  }
+
+  .OwnerContainer {
+    display: grid;
+    grid-auto-flow: column;
+    justify-content: center;
+    align-content: center;
+    max-height: 2rem;
+
+    .Owner {
+      padding-block: 0.1rem;
+      padding-inline: 0.7rem;
+      min-height: 1.3rem;
+      border-radius: 0.7rem;
+
+      &.Opponent {
+        background-color: rgba(255, 0, 0, 0.607);
+        color: rgb(255, 221, 221);
+      }
+
+      &.Player {
+        background-color: rgba(0, 188, 6, 0.535);
+        color: rgb(220, 255, 226);
+        vertical-align: middle;
+      }
+    }
+  }
+}

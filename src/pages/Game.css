@@ -28,6 +28,7 @@ html, body {
   box-shadow: 0px 0px 40px black;
   z-index: 2;
   gap: 1rem;
+  background-image: url("interlaced.png");
 
   border-bottom: 2px solid rgba(0,0,0,0.25);
 }
@@ -111,6 +112,7 @@ html, body {
   padding: 1rem;
   border-top: 4px solid black;
   box-shadow: 0px 0px 40px black;
+  background-image: url("interlaced.png");
 }
 
 .player-deck-container {
@@ -129,11 +131,15 @@ html, body {
 }
 
 .player-container .card-container {
+  background-color: rgb(215, 215, 215) !important;
+  background-image: none;
+  padding: 0.5rem;
   display: grid;
   grid-auto-flow: column;
   justify-items: center;
   gap: 10px;
   border-radius: 10px;
+  box-shadow: inset 0px 0px 5px 5px rgba(0, 0, 0, 0.312);
 }
 
 

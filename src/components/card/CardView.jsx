@@ -1,5 +1,6 @@
 import { useCallback } from "react";
 import style from "./CardView.module.css";
+import Icon from "../Icon";
 
 export default function CardView({ card, selected, enabled, highlighted, onClick, onInfo }) {
 
@@ -16,10 +17,10 @@ export default function CardView({ card, selected, enabled, highlighted, onClick
     innerCard = (
       <div className={`${ style.Card } ${ cardSelected } ${ cardHighlighted }`}>
         <button className={ style.InfoButton } onClick={ onInfo }>
-          <i className="bi bi-info-circle"></i>
+          <Icon icon="info-circle" />
         </button>
         <div className={ style.Picture }>
-          <i className={`bi-${card.icon}`}></i>
+          <Icon icon={ card.icon }/>
         </div>
         <div className={ style.Title }>{ card.name }</div>
       </div>

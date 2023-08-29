@@ -73,6 +73,7 @@ export const Cards = [
     id: "reverse", 
     icon: "arrow-down-up", 
     name: "Воровство заклинания", 
+    affectedCards: (slotId) => [ slotId + 1 ],
     description: "Меняет владельца следующего заклинания. Заклинание соперника станет вашим, а ваше заклинания станет заклинанием соперника." ,
     action: ( actions, game, slotId, player, opponent) => {
       const [ card, id ] = game.getNextDeskCard(slotId);
@@ -87,6 +88,7 @@ export const Cards = [
     id: "repeat",
     icon: "arrow-clockwise",
     name: "Магический повтор",
+    affectedCards: (slotId) => [ slotId - 1],
     description: "Повторяет предыдущее заклинание от вашего имени.", 
     action: ( actions, game, slotId, player, opponent) => {
       const [ card, id ] = game.getPrevDeskCard(slotId);
