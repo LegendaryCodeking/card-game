@@ -66,14 +66,20 @@ server.on('connection', socket => {
       if (game.players.length < 2) availableGame = game;
     }
 
+    function addPlayer(game, playerId, props) {
+      game.addPlayer(playerId, {
+        name: props.name ?? "player",
+      });
+    }
+
     if (availableGame) {
       if (!availableGame.hasPlayer(player.id)) { 
-        availableGame.addPlayer(player.id, {});
+        addPlayer(availableGame, player.id, request.player);
       }
     } else {
       console.log("MN -> Creating new game")
       availableGame = new Game({ id: uuid() });
-      availableGame.addPlayer(player.id, {});
+      addPlayer(availableGame, player.id, request.player);
       games.set(availableGame.id, availableGame);
     }
     connection.sendGameIsFound({ gameId: availableGame.id });
@@ -114,20 +120,21 @@ server.on('connection', socket => {
     const game = connection.game;
 
     function scheduleNewTurn() {
-      if (game.state === GameState.EXECUTION_TURN) {
-        const actions = [];
-        game.performExecutionTurn(actions);
-        game.actions = actions;
-        getPlayersConnections(game.players.map(p => p.id))
-          .forEach(con => con.sendPartialUpdate(game, ['actions', 'players', 'desk', 'turn', 'state']));
+      game.performExecutionTurn();
+      getPlayersConnections(game.players.map(p => p.id))
+        .forEach(con => con.sendPartialUpdate(game, ['actions', 'players', 'desk', 'turn', 'state']));
 
+      if (game.state === GameState.EXECUTION_TURN) {
+        // Verify that we need to perform one more execution turn
         setTimeout(() => scheduleNewTurn(), 3000);
       } else {
-        game.executionInProcess = false;
+        // Otherwise complete execution completely 
+        game.executionInProgress = false;
       }
     }
 
     if (game.state === GameState.EXECUTION_TURN && !game.executionInProgress) {
+      console.log('schedule execution')
       game.executionInProgress = true;
       setTimeout(() => scheduleNewTurn(), 3000);
     }

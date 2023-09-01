@@ -1,0 +1,57 @@
+
+
+.CardDeck {
+
+  --card-width: 135px;
+  --card-height: 195px;
+
+  min-width: var(--card-width);
+  max-width: var(--card-width);
+  min-height: var(--card-height);
+  max-height: var(--card-height);
+  margin-right: 1rem;
+
+  &.Disabled {
+    opacity: 0.5;
+  }
+
+  &.Enabled {
+    &:hover {
+      cursor: pointer;
+
+      .FirstCard {
+        transform: translateY(3px) rotateZ(3deg) !important;
+      }
+
+      .SecondCard {
+        transform: rotateZ(-3deg);
+      }
+
+      .ThirdCard {
+        transform: rotateZ(-3deg);
+      }
+    }
+  }
+
+  .Card {
+    position: absolute;
+
+    min-width: var(--card-width);
+    max-width: var(--card-width);
+    min-height: var(--card-height);
+    max-height: var(--card-height);
+
+    border-radius: 10px;
+    border: 4px solid grey;
+    background-image: url('/pap.png');
+    transition: 0.2s;
+  }
+
+  .FirstCard {
+    transform: translateY(5px) rotateZ(5deg);
+  }
+
+  .SecondCard {
+    transform: rotateZ(-5deg);
+  }
+}

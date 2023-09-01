@@ -37,13 +37,13 @@ export default class Game {
    */
   addPlayer(playerId, properties) {
     console.log("GM -> Player added");
-    const player = new PlayerInstance({ id: playerId });
+    const player = new PlayerInstance({ id: playerId, ...properties });
     this.players.push(player);
 
     // Add 6 card slots to the player hand
     for (let i = 0; i < 6; i++) {
       player.hand.push(undefined);
-      this.pullCard(playerId);
+      this.pullCard(playerId, false);
     }
 
     if (this.players.length === 2) this.nextTurn();
@@ -126,7 +126,7 @@ export default class Game {
         const direction = toSlotId - fromSlotId > 0 ? 1 : -1;
         if (direction === 0) return false;
         
-        for (let i = fromSlotId; i >= 0 && i < this.desk.length; i += direction) {
+        for (let i = fromSlotId + direction; i >= 0 && i < this.desk.length; i += direction) {
           if (this.desk[i] && this.desk[i].owner !== playerId) break;
           if (i === toSlotId) return true;
         }
@@ -182,7 +182,8 @@ export default class Game {
 
   getPlayerCardsCount(playerId) {
     const cardsOnDesk = this.desk.filter((ref) => ref?.owner === playerId).length;
-    const cardsOnHand = this.getPlayer(playerId).hand.filter((ref) => ref !== undefined).length;
+    const cardsOnHand = this.getPlayer(playerId).hand
+      .filter((ref) => ref !== undefined && ref !== null).length;
     return cardsOnDesk + cardsOnHand; 
   }
 
@@ -217,13 +218,23 @@ export default class Game {
     return this.state === GameState.EXECUTION_TURN && this.turn.slotId === slotId;
   }
 
+  canPullCard(playerId) {
+    const player = this.getPlayer(playerId);
+    if (player) {
+      const playersTurn = this.state === GameState.PLAYER_TURN;
+      const notEnoughCards = this.getPlayerCardsCount(playerId) < 6;
+      return playersTurn && notEnoughCards;
+    }
+    return false;
+  }
+
   /**
    * Pulls the card for a specific player from his deck
    */
-  pullCard(playerId) {
-    if (this.getPlayerCardsCount(playerId) == 6) return;
-    const player = this.getPlayer(playerId);
+  pullCard(playerId, performValidation = true) {
+    if (!this.canPullCard(playerId) && performValidation) return;
 
+    const player = this.getPlayer(playerId);
     // The card will be a random one
     // TODO(vadim): Do randomness better
     const cardId = Math.round(Math.random() * this.cards.length) % this.cards.length;
@@ -290,10 +301,12 @@ export default class Game {
     this.state = GameState.COMPLETE;
   }
 
-  performExecutionTurn(actions) {
+  performExecutionTurn() {
+    this.actions = [];
+    const actions = this.actions;
+
     if (this.state === GameState.EXECUTION_TURN) {
       console.log(`GM -> perform execution turn`);
-
 
       // Perform action for the current card
       const cardRef = this.desk[this.turn.slotId];
