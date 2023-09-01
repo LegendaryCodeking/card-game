@@ -1,8 +1,8 @@
 import { useCallback } from "react";
-import style from "./CardView.module.css";
-import Icon from "../Icon";
+import style from "./CardSlot.module.css";
+import Icon from "./Icon";
 
-export default function CardView({ card, selected, enabled, highlighted, onClick, onInfo }) {
+export default function CardSlot({ card, selected, enabled, highlighted, onClick, onInfo }) {
 
   const cardSlotEnabled = enabled ? style.CardSlotEnabled : style.CardSlotDisabled;
   const cardSelected = !highlighted && enabled && selected ? style.CardSelected : '';

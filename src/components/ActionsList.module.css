@@ -1,0 +1,21 @@
+
+.ActionsContainer {
+  max-height: 100%;
+  display: grid;
+  grid-auto-flow: row;
+  justify-items: start;
+
+  .Action {
+    color: white;
+    padding: 0.5rem;
+    padding-left: 0rem;
+    border-radius: 1rem;
+    margin: 1rem;
+    margin-top: 0rem;
+    display: grid;
+    grid-auto-flow: column;
+    align-items: center;
+    gap: 1rem;
+  }
+}
+

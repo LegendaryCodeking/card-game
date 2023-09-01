@@ -26,8 +26,7 @@ export default function App() {
     <GamePage 
       gameId={ gameId }
       connection={ connection }
-      player={ player }
-      setPlayer={ setPlayer }
+      playerInfo={ player }
     />
   )
 

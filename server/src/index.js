@@ -1,20 +1,33 @@
 import { WebSocketServer } from "ws";
 import Game, { GameState } from "../../core/Game.js";
 import ClientConnection from "./io/ClientConnection.js";
-import Player from "../../core/Player.js";
 import { Errors } from "../../core/Errors.js";
 import { v4 as uuid } from "uuid";
 
 const server = new WebSocketServer({ port: 8080 });
 
-// All games that are currently going on
+// GameId <-> Game
 const games = new Map();
 
-// All players connections
+// PlayerId <-> Connection
 const connections = new Map();
 
-function getPlayersConnections(players) {
-  return players.map(p => connections.get(p.id))
+function closePlayerConnection(playerId) {
+  if (connections.has(playerId)) {
+    connections.get(playerId).close();
+    connections.delete(playerId);
+  }
+}
+
+function addPlayerConnection(playerId, connection) {
+  closePlayerConnection(playerId);
+  connections.set(playerId, connection);
+}
+
+function getPlayersConnections(playersIds) {
+  return playersIds 
+    .filter(id => id !== undefined)
+    .map(id => connections.get(id))
     .filter(con => con !== undefined);
 }
 
@@ -25,226 +38,137 @@ server.on('connection', socket => {
 
   connection.onClose(() => {
     if (connection.player === undefined) return;
-    connections.delete(connection.player.id);
+    closePlayerConnection(connection.player.id);
   });
 
   /**
-   * Asks the server to find a game. It will find any available one
-   * to join and return its gameId
+   * Event handler needs to get player information
    */
-  connection.onFindGame(request => {
+  connection.onPlayerRequest(async (request) => {
+    // TODO(vadim): read player info from database
+    // return db.get(request.playerId);
+    // throw if player is not found
+    return request.player;
+  })
 
-    // Go through all games to find any available one
+  /**
+   * Player asks the game server to find available game
+   */
+  connection.onFindGame((request, player) => {
+    addPlayerConnection(player.id, connection);
+
+    // Find available game for this player
     // TODO(vadim): O(N)! Should be O(1)
-    let availableGameId = undefined;
+    // TODO(vadim): Verify that player is not in some other game
+    // TODO(vadim): We should prioritize the oldest available game
+    let availableGame = undefined;
     for (const [id, game] of games) {
-      if (game.players.length < 2) availableGameId = id;
+      if (game.players.length < 2) availableGame = game;
     }
 
-    if (availableGameId) {
-
-      // Find available game to play
-      const game = games.get(availableGameId);
-      const playerIndex = game.players.findIndex(p => p.id === request.player.id);
-
-      // If game doesn't have this player, we should add him
-      if (playerIndex < 0) game.addPlayer(new Player(request.player));
-
-      connection.sendGameIsFound({ gameId: availableGameId });
-
+    if (availableGame) {
+      if (!availableGame.hasPlayer(player.id)) { 
+        availableGame.addPlayer(player.id, {});
+      }
     } else {
-
-      // Create a new one
       console.log("MN -> Creating new game")
-      const game = new Game();
-      const gameId = uuid();
-      game.addPlayer(new Player(request.player));
-      games.set(gameId, game);
-      connection.sendGameIsFound({ gameId });
+      availableGame = new Game({ id: uuid() });
+      availableGame.addPlayer(player.id, {});
+      games.set(availableGame.id, availableGame);
     }
-
-    connection.player = new Player(request.player);
+    connection.sendGameIsFound({ gameId: availableGame.id });
   });
   
   /**
-   * Player joins the existing game based on gameId field.
-   * We will return the entire game state.
+   * Player joins the existing game using gameId.
    */
-  connection.onJoinGame(request => {
+  connection.onJoinGame((request, player) => {
+
     // Player wants to join a new game
     const game = games.get(request.gameId);
+    connection.game = game;
 
     if (!game) {
       connection.sendError(Errors.GAME_IS_NOT_FOUND);
       return;
     }
 
-    if (!game.state === GameState.WAITING_FOR_PLAYERS) {
-      connection.sendError(Errors.GAME_IS_FULL);
-      return;
+    if (!game.hasPlayer(player.id)) {
+      game.addPlayer(player.id, {});
     }
-
-    let player = game.getPlayer(request.player.id);
-    if (player) {
-      // Reconnect the existing one
-      console.log(`MN -> '${ player.name }' re-joins the game `);
-    } else {
-      // Add a new player
-      console.log(`MN -> '${ request.player.name }' joins the game `);
-      player = game.addPlayer(new Player(request.player));
-    }
-
-    // Close previous connection
-    if (connections.has(request.player.id)) {
-      connections.get(request.player.id).close();
-      connections.delete(request.player.id);
-    }
-
-    // Set new connection for this player
-    connections.set(request.player.id, connection);
-
-    // Need to remember which player and which game
-    connection.player = new Player(player ?? request.player);
-    connection.game = game;
+    console.log(`MN -> ${ player.name } joins the game`);
 
     // Send the entire state of the game
     connection.sendFullUpdate(game);
 
-    getPlayersConnections(game.players.filter(p => p.id !== player.id))
+    getPlayersConnections([ game.getOpponent(player.id)?.id ])
       .forEach(con => con.sendPartialUpdate(game, ['players', 'state', 'turn']));
   });
 
   /**
-   * On every event that we will recieve from players, we should
-   * check if game needs to move to a new turn.
+   * When event handling is completed by other event listeners,
+   * we call this function to make sure that game will proceed to the next state.
    */
-  connection.onEvent(() => {
+  connection.onEventCompleted(() => {
     if (!connection.game) return;
+    const game = connection.game;
 
     function scheduleNewTurn() {
-      const game = connection.game;
-      if (game && game.state === GameState.EXECUTION_TURN) {
+      if (game.state === GameState.EXECUTION_TURN) {
         const actions = [];
         game.performExecutionTurn(actions);
-
         game.actions = actions;
-        getPlayersConnections(game.players)
+        getPlayersConnections(game.players.map(p => p.id))
           .forEach(con => con.sendPartialUpdate(game, ['actions', 'players', 'desk', 'turn', 'state']));
+
         setTimeout(() => scheduleNewTurn(), 3000);
       } else {
-        connection.game.executionInProcess = false;
+        game.executionInProcess = false;
       }
     }
 
-    if (!connection.game.executionInProcess) {
-      console.log("MN -> Schedule execution turn")
-      connection.game.executionInProcess = true;
+    if (game.state === GameState.EXECUTION_TURN && !game.executionInProgress) {
+      game.executionInProgress = true;
       setTimeout(() => scheduleNewTurn(), 3000);
     }
   })
 
-  connection.onPullCard(() => {
-    const game = connection.game;
-    const player = game.getPlayer(connection.player.id);
-    game.pullCard(player);
+  connection.onPullCard((request, player, game) => {
+    game.pullCard(player.id);
+
     connection.sendPartialUpdate(game, [ 'players' ]);
   });
 
-  /**
-   * Whenever the player decided to complete his turn.
-   */
-  connection.onCompleteTurn(() => {
-    const game = connection.game;
-    const player = game.getPlayer(connection.player.id);
-    if (!game.isPlayerTurn(player)) return;
-
+  connection.onCompleteTurn((request, player, game) => {
     game.nextTurn();
-    
-    getPlayersConnections(game.players)
+
+    getPlayersConnections(game.players.map(p => p.id))
       .forEach(con => con.sendPartialUpdate(game, [ 'state', 'turn']))
   });
 
-  connection.onMoveCardFromHandToDesk(request => {
-    const handSlotId = request.handSlotId;
-    const deskSlotId = request.deskSlotId;
+  connection.onMoveCardFromHandToDesk((request, player, game) => {
+    game.moveCardFromHandToDesk(player.id, request.handSlotId, request.deskSlotId);
 
-    const game = connection.game;
-    const player = game.getPlayer(connection.player.id);
-
-    if (!game.isPlayerTurn(player)) return;
-
-    // Move the card
-    const cardRef = player.hand[handSlotId];
-    player.hand = player.hand.map((ref, id) => id === handSlotId ? undefined : ref)
-    game.desk = game.desk.map((ref, id) => id === deskSlotId ? cardRef : ref);
-
-    // Send update of the desk to everyone except for the player itself
-    getPlayersConnections(game.players.filter(p => p.id !== player.id))
+    getPlayersConnections([ game.getOpponent(player.id)?.id ])
       .forEach(con => con.sendPartialUpdate(game, ['desk']));
   });
 
-  connection.onMoveCardFromDeskToHand(request => {
-    const deskSlotId = request.deskSlotId;
-    const handSlotId = request.handSlotId;
+  connection.onMoveCardFromDeskToHand((request, player, game)=> {
+    game.moveCardFromDeskToHand(player.id, request.deskSlotId, request.handSlotId);
 
-    const game = connection.game;
-    const player = game.getPlayer(connection.player.id);
-
-    if (!game.isPlayerTurn(player)) return;
-
-    // Move the card
-    const cardRef = game.desk[deskSlotId];
-
-    // Player can't move someones card to their hand
-    if (cardRef.owner !== player.id) return;
-
-    game.desk = game.desk.map((ref, id) => id === deskSlotId ? undefined : ref);
-    player.hand = player.hand.map((ref, id) => id === handSlotId ? cardRef : ref);
-
-    // Send update of the desk to everyone except the player itself
-    getPlayersConnections(game.players.filter(p => p.id !== player.id))
+    getPlayersConnections([ game.getOpponent(player.id)?.id ])
       .forEach(con => con.sendPartialUpdate(game, ['desk']));
   });
 
-  connection.onMoveCardFromDeskToDesk(request => {
-    const fromSlotId = request.fromSlotId;
-    const toSlotId = request.toSlotId;
+  connection.onMoveCardFromDeskToDesk((request, player, game) => {
+    game.moveCardFromDeskToDesk(player.id, request.fromSlotId, request.toSlotId);
 
-    const game = connection.game;
-    const player = game.getPlayer(connection.player.id);
-
-    if (!game.isPlayerTurn(player)) return;
-
-    // TODO(vadim): Verify order of the cards
-    
-    // Move the card
-    const cardRef = game.desk[fromSlotId];
-    game.desk = game.desk
-      .map((ref, id) => id === fromSlotId ? undefined : ref)
-      .map((ref, id) => id === toSlotId ? cardRef : ref)
-
-    // Send update of the desk to everyone except the player itself
-    getPlayersConnections(game.players.filter(p => p.id !== player.id))
+    getPlayersConnections([ game.getOpponent(player.id)?.id ])
       .forEach(con => con.sendPartialUpdate(game, ['desk']));
   }); 
 
-  connection.onMoveCardFromHandToHand(request => {
-    const fromSlotId = request.fromSlotId;
-    const toSlotId = request.toSlotId;
-
-    const game = connection.game;
-    const player = game.getPlayer(connection.player.id);
-
-    if (!game.isPlayerTurn(player)) return;
-
-    // Move the card
-    const cardRef = player.hand[fromSlotId];
-    player.hand = player.hand
-      .map((ref, id) => id === fromSlotId ? undefined : ref)
-      .map((ref, id) => id === toSlotId ? cardRef : ref);
-
-    // no need to send any updates because hands are not visible to other players
-    // and the player itself knows what's going on with its hand
+  connection.onMoveCardFromHandToHand((request, player, game) => {
+    game.moveCardFromHandToHand(player.id, request.fromSlotId, request.toSlotId);
   });
 
 })

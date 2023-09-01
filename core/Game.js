@@ -1,3 +1,4 @@
+import { PlayerInstance } from "./Player.js";
 import { CardReference, Cards } from "./card.js";
 
 export const GameState = {
@@ -18,47 +19,150 @@ export class TurnState {
  */
 export default class Game {
 
-  // State of the current turn
+  id = undefined;
   turn = new TurnState();
-
-  // State of the game 
   state = GameState.WAITING_FOR_PLAYERS;
-
-  // Game desk contains slots for cards (each indexed by slotId)
   desk = [ undefined, undefined, undefined, undefined, undefined, undefined ];
-
-  // List of players participating in the game
   players = [];
-
-  // All cards which are allowed in this game
   cards = Cards;
 
   constructor(data) {
     Object.assign(this, data);
   }
 
-  addPlayer(player) {
+  /**
+   * Creates a new player for this particular game with a defined playerId
+   * and some player properties (character, picked cards, etc.).
+   * @returns PlayerInstance added to the game
+   */
+  addPlayer(playerId, properties) {
     console.log("GM -> Player added");
-    player.hand = [];
-    player.health = 30;
+    const player = new PlayerInstance({ id: playerId });
+    this.players.push(player);
+
+    // Add 6 card slots to the player hand
     for (let i = 0; i < 6; i++) {
       player.hand.push(undefined);
-      this.pullCard(player);
+      this.pullCard(playerId);
     }
-    this.players.push(player);
+
     if (this.players.length === 2) this.nextTurn();
     
-    if (this.turn.playerId === undefined) {
+    if (!this.turn.playerId) {
       this.turn.playerId = player.id;
     }
 
     return player;
   }
 
-  isPlayerTurn(player) {
-    return this.state === GameState.PLAYER_TURN && this.turn.playerId === player.id;
+  hasPlayer(playerId) {
+    return this.getPlayer(playerId) !== undefined;
   }
 
+  isPlayerTurn(playerId) {
+    return this.state === GameState.PLAYER_TURN && this.turn.playerId === playerId;
+  }
+
+  canMoveCardFromHandToDesk(playerId, fromSlotId, toSlotId) {
+    if (!this.isPlayerTurn(playerId)) return false;
+
+    const player = this.getPlayer(playerId);
+    const cardInstance = player.hand[fromSlotId];
+    const slotAvailable = !this.desk[toSlotId];
+    const playerDeskCards = this.getPlayerDeskCardsCount(playerId);
+
+    return cardInstance && slotAvailable && playerDeskCards < 3;
+  }
+
+  moveCardFromHandToDesk(playerId, fromSlotId, toSlotId) {
+    if (!this.canMoveCardFromHandToDesk(playerId, fromSlotId, toSlotId)) {
+      return;
+    }
+    const player = this.getPlayer(playerId);
+    const cardInstance = player.hand[fromSlotId];
+    player.hand[fromSlotId] = undefined; 
+    this.desk[toSlotId] = cardInstance;
+  }
+
+  canMoveCardFromDeskToHand(playerId, fromSlotId, toSlotId) {
+    if (!this.isPlayerTurn(playerId)) return false;
+
+    const player = this.getPlayer(playerId);
+    const cardInstance = this.desk[fromSlotId];
+
+    if (cardInstance) {
+      const slotAvailable = !player.hand[toSlotId];
+      const ownsCard = cardInstance.owner === playerId;
+      return slotAvailable && ownsCard;
+    }
+    return false;
+  }
+
+  moveCardFromDeskToHand(playerId, fromSlotId, toSlotId) {
+    if (!this.canMoveCardFromDeskToHand(playerId, fromSlotId, toSlotId)) {
+      return;
+    }
+
+    const player = this.getPlayer(playerId);
+    const cardInstance = this.desk[fromSlotId];
+    player.hand[toSlotId] = cardInstance;
+    this.desk[fromSlotId] = undefined;
+  }
+
+  canMoveCardFromDeskToDesk(playerId, fromSlotId, toSlotId) {
+    if (!this.isPlayerTurn(playerId)) return false;
+
+    const cardInstance = this.desk[fromSlotId];
+    if (cardInstance && !this.desk[toSlotId]) {
+      
+      if (cardInstance.owner === playerId) {
+        // Player can move their own card anywhere they wants
+        return true;
+      } else {
+        // Cards of opponents can be moved only
+        // to a specific places (player should not be able to re-arrange the sequence of
+        // opponents cards).
+      
+        const direction = toSlotId - fromSlotId > 0 ? 1 : -1;
+        if (direction === 0) return false;
+        
+        for (let i = fromSlotId; i >= 0 && i < this.desk.length; i += direction) {
+          if (this.desk[i] && this.desk[i].owner !== playerId) break;
+          if (i === toSlotId) return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
+  moveCardFromDeskToDesk(playerId, fromSlotId, toSlotId) {
+    if (!this.canMoveCardFromDeskToDesk(playerId, fromSlotId, toSlotId)) {
+      return;
+    }
+
+    const cardInstance = this.desk[fromSlotId];
+    this.desk[toSlotId] = cardInstance;
+    this.desk[fromSlotId] = undefined;
+  }
+
+  canMoveCardFromHandToHand(playerId, fromSlotId, toSlotId) {
+    const player = this.getPlayer(playerId);
+    const cardInstance = player.hand[fromSlotId];
+    return cardInstance && !player.hand[toSlotId];
+  }
+
+  moveCardFromHandToHand(playerId, fromSlotId, toSlotId) {
+    if (!this.canMoveCardFromHandToHand(playerId, fromSlotId, toSlotId)) {
+      return;
+    }
+
+    const player = this.getPlayer(playerId);
+    player.hand[toSlotId] = player.hand[fromSlotId];
+    player.hand[fromSlotId] = undefined;
+  }
+
+  // TODO(vadim): This should accept playerId
   isWinner(player) {
     let loser = this.players[0];
     for (let p of this.players) {
@@ -76,19 +180,18 @@ export default class Game {
     return this.players.find(p => p.id !== playerId);
   }
 
-  getTotalPlayerCards(player) {
-    const cardsOnDesk = this.desk.filter((ref) => ref?.owner === player.id).length;
-    const cardsOnHand = player.hand.filter((ref) => ref !== undefined).length;
+  getPlayerCardsCount(playerId) {
+    const cardsOnDesk = this.desk.filter((ref) => ref?.owner === playerId).length;
+    const cardsOnHand = this.getPlayer(playerId).hand.filter((ref) => ref !== undefined).length;
     return cardsOnDesk + cardsOnHand; 
   }
 
-  getTotalDeskPlayerCards(player) {
-    console.log(this.desk);
-    return this.desk.filter((ref) => ref?.owner === player.id).length;
+  getPlayerDeskCardsCount(playerId) {
+    return this.desk.filter((ref) => ref?.owner === playerId).length;
   }
 
-  getTotalHandPlayerCards(player) {
-    return player.hand.filter((ref) => ref !== undefined).length;
+  getPlayerHandCardsCount(playerId) {
+    return this.getPlayer(playerId).hand.filter((ref) => ref !== undefined).length;
   }
 
   getNextDeskCard(slotId) {
@@ -109,6 +212,7 @@ export default class Game {
     return this.cards.find(c => c.id === cardRef.id);
   }
 
+  // TODO(vadim): Rename to "isCardSlotIsExecuting"
   isSlotExecuted(slotId) {
     return this.state === GameState.EXECUTION_TURN && this.turn.slotId === slotId;
   }
@@ -116,13 +220,14 @@ export default class Game {
   /**
    * Pulls the card for a specific player from his deck
    */
-  pullCard(player) {
-    if (this.getTotalPlayerCards(player) == 6) return;
+  pullCard(playerId) {
+    if (this.getPlayerCardsCount(playerId) == 6) return;
+    const player = this.getPlayer(playerId);
 
     // The card will be a random one
     // TODO(vadim): Do randomness better
     const cardId = Math.round(Math.random() * this.cards.length) % this.cards.length;
-    const availableSlot = player.hand.findIndex(cid => cid === undefined);
+    const availableSlot = player.hand.findIndex(ref => !ref);
     if (availableSlot >= 0) {
       player.hand[availableSlot] = new CardReference(this.cards[cardId].id, player.id);
     }
@@ -131,7 +236,9 @@ export default class Game {
   /**
    * Completes the current turn and moves to the next one.
    */
-  nextTurn() {
+  nextTurn(playerId) {
+    if (playerId && !this.isPlayerTurn(playerId)) return;
+
     // We can't do anything until all players are in the game
     if (this.players.length < 2) return;
 

@@ -1,21 +1,12 @@
 
-// TODO(vadim): Use this class to represent instance of the player in the game
-export class PlayerReference {
+/**
+ * Contains game related player information.
+ */
+export class PlayerInstance {
+
   id = 0;
-
-  health = 50;
-  hand = [];
-  pullSize = 0;
-  effects = [];
-}
-
-export default class Player {
-  
-  id = 1;
   icon = "emoji-angry";
   name = "player";
-
-  // Game related properties
   health = 50;
   hand = [];
   pullSize = 0;
@@ -25,7 +16,17 @@ export default class Player {
     Object.assign(this, data);
   }
 
-  hasEffect(effect) {
-    return this.effects.find(e => e.id === effect.id) !== undefined;
+  hasEffect(effectId) {
+    return this.effects.find(e => e.id === effectId) !== undefined;
+  }
+}
+
+export default class Player {
+  
+  id = 1;
+  name = "vadim";
+
+  constructor(data) {
+    Object.assign(this, data);
   }
 }

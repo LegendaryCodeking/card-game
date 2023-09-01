@@ -1,50 +1,38 @@
 import "./Game.css"
 import { useState, useEffect, useCallback } from "react"
-import CardView from "../components/card/CardView"
-import Player from "../../core/Player";
-import Game, { GameState } from "../../core/Game";
+import CardView from "../components/CardSlot"
+import { GameState } from "../../core/Game";
 import PlayerHealth from "../components/PlayerHealth";
 import PlayerCards from "../components/PlayerCards";
 import PlayerAvatar from "../components/PlayerAvatar";
 import PlayerEffects from "../components/PlayerEffects";
-import ActionsView from "../components/ActionView";
+import ActionsView from "../components/ActionsList";
 import FullscreenLayout from "../components/FullscreenLayout";
 import PlayerWaiting from "../components/PlayerWaiting";
 import CardInfo from "../components/CardInfo";
 import { useGameSession } from "../io/GameSession";
 import GameComplete from "../components/GameComplete";
-import CardDeskSlot from "../components/card/CardDeskSlot";
+import DeskSlot from "../components/DeskSlot";
 
-export default function GamePage({ player, setPlayer, connection, gameId }) {
+export default function GamePage({ playerInfo, connection, gameId }) {
 
-  const [ game, setGame ] = useState(new Game());
-  const [ opponent, setOpponent ] = useState(new Player());
-
-  const [ desk, setDesk ] = useState([]);
-  const [ hand, setHand ] = useState([]);
   const [ actions, setActions ] = useState([]);
-
   const [ deskDisabled, setDeskDisabled ] = useState([]);
   const [ selectedDeskCard, setSelectedDeskCard ] = useState(undefined);
   const [ selectedHandCard, setSelectedHandCard ] = useState(undefined);
   const [ showCardInfo, setShowCardInfo ] = useState(undefined);
 
-  const gameSession = useGameSession(connection, player, gameId, {
-    onFullUpdate: response => setGame(g => g.update(response.data)),
-    onPartialUpdate: response => setGame(g => g.update(response.data)),
-  });
+  const gameSession = useGameSession(connection, playerInfo, gameId, {});
 
-  useEffect(() => {
-    // Whenever the game is updated, we should updated players
-    const updatedPlayer = game.getPlayer(player.id) ?? player;
-    setPlayer(updatedPlayer);
-    setOpponent(game.players.find(p => p.id !== player.id) ?? opponent);
-    setHand(updatedPlayer.hand.map(ref => ref === null ? undefined : ref));
-  }, [ game.players ]);
+  const game = gameSession.game;
+  const player = gameSession.player;
+  const opponent = gameSession.opponent;
+  const hand = gameSession.hand;
+  const desk = gameSession.desk;
 
   useEffect(() => { 
     // Whenever game is updated, we should extract the desk
-    setDesk(game.desk.map(ref => ref === null ? undefined : ref)); 
+    // setDesk(game.desk.map(ref => ref === null ? undefined : ref)); 
     setDeskDisabled(game.desk.map(r => false));
   }, [ game.desk ])
 
@@ -124,24 +112,14 @@ export default function GamePage({ player, setPlayer, connection, gameId }) {
       
       // Move our card from the desk to the hand
       if (selectedDeskCard !== undefined && desk[selectedDeskCard].owner === player.id) {
-        const cardFromDesk = desk[selectedDeskCard];
-        setDesk(desk.map((c, id) => id === selectedDeskCard ? undefined : c));
-        setHand(hand.map((c, id) => id === cardId ? cardFromDesk : c));
         gameSession.moveCardFromDeskToHand(selectedDeskCard, cardId);
-        setSelectedHandCard(undefined);
-        setSelectedDeskCard(undefined);
         return;
       }
 
       // Move our card from the hand to another place
       if (selectedHandCard !== undefined) {
-        const cardFromHand = hand[selectedHandCard];
-        setHand(hand
-          .map((c, id) => id === cardId ? cardFromHand : c)
-          .map((c, id) => id === selectedHandCard ? undefined : c));
         gameSession.moveCardFromHandToHand(selectedHandCard, cardId);
-        setSelectedDeskCard(undefined);
-        setSelectedHandCard(undefined);
+        return;
       }
 
     }
@@ -163,31 +141,17 @@ export default function GamePage({ player, setPlayer, connection, gameId }) {
 
       // Move our card from the hand to the desk
       if (selectedHandCard !== undefined) {
-        const cardFromHand = hand[selectedHandCard];
-        setDesk(desk.map((c, id) => id === cardId ? cardFromHand : c ));
-        setHand(hand.map((c, id) => id === selectedHandCard ? undefined : c ));
-        connection.sendMoveCardFromHandToDesk(selectedHandCard, cardId);
-        setSelectedHandCard(undefined);
-        setSelectedDeskCard(undefined);
-        return;
+        gameSession.moveCardFromHandToDesk(selectedHandCard, cardId);
+        return;  
       }
 
       // Move card to the free slot
       if (selectedDeskCard !== undefined) {
-        const cardFromDesk = desk[selectedDeskCard];
-        setDesk(desk
-          .map((c, id) => id === selectedDeskCard ? undefined : c)
-          .map((c, id) => id === cardId ? cardFromDesk: c));
-        connection.sendMoveCardFromDeskToDesk(selectedDeskCard, cardId);
-        setSelectedDeskCard(undefined);
-        setSelectedHandCard(undefined);
+       gameSession.moveCardFromDeskToDesk(selectedDeskCard, cardId);
       } 
     }
 
   }, [ hand, desk, selectedHandCard, selectedDeskCard, connection ]);
-
-  const deckCardOwnerOpponent = <div className='deck-card-owner-opponent'>{ opponent.name }</div>
-  const deckCardOwnerPlayer = <div className='deck-card-owner-player'>{ player.name }</div>
 
   let opponentBadge = undefined;
   let playerBadge = undefined;
@@ -239,7 +203,7 @@ export default function GamePage({ player, setPlayer, connection, gameId }) {
 
           <div className="inner-card-container">
             { desk.map((ref, id) => 
-              <CardDeskSlot key={id} 
+              <DeskSlot key={id} 
                 owner={ ref ? { 
                   name: game.getPlayer(ref.owner).name, 
                   opponent: game.getPlayer(ref.owner).id !== player.id
@@ -247,13 +211,13 @@ export default function GamePage({ player, setPlayer, connection, gameId }) {
                 >
                 <CardView 
                   card={ ref ? game.cards.find(c => c.id === ref.id) : undefined } 
-                  enabled={ game.isPlayerTurn(player) && !deskDisabled[id] }
+                  enabled={ game.isPlayerTurn(player.id) && !deskDisabled[id] }
                   onClick={ () => onDeskCardClick(id) } 
                   selected={ id === selectedDeskCard } 
                   highlighted={ game.isSlotExecuted(id) }
                   onInfo={ () => onInfo(game.getCard(ref)) }
                 />
-              </CardDeskSlot>
+              </DeskSlot>
               ) 
             }
           </div>
@@ -266,7 +230,7 @@ export default function GamePage({ player, setPlayer, connection, gameId }) {
 
         <div className="turn-button-container">
           {
-            game.isPlayerTurn(player) ? <button 
+            game.isPlayerTurn(player.id) ? <button 
               className="end-turn-button" 
               onClick={ gameSession.completeTurn }>
                 <i className="bi bi-play-circle-fill"></i></button> : undefined
@@ -286,7 +250,7 @@ export default function GamePage({ player, setPlayer, connection, gameId }) {
             <CardView 
               key={id} 
               card={ ref ? game.getCard(ref) : undefined } 
-              enabled={ game.isPlayerTurn(player) }
+              enabled={ game.isPlayerTurn(player.id) }
               onClick={ () => onHandCardClick(id) }
               onInfo={ () => onInfo(game.getCard(ref)) }
               selected={ id === selectedHandCard }/>)}
@@ -294,7 +258,7 @@ export default function GamePage({ player, setPlayer, connection, gameId }) {
         <div className="player-deck-container">
           <CardView 
             onClick={ gameSession.pullCard }
-            enabled={ game.isPlayerTurn(player) }
+            enabled={ game.isPlayerTurn(player.id) }
           />
         </div>
       </div>

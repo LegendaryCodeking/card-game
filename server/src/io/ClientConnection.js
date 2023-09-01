@@ -10,22 +10,11 @@ export default class ClientConnection extends Connection {
   constructor(socket) {
     super(socket);
 
-    // Set listener for all incoming messages
     socket.on('message', data => {
-      const request = JSON.parse(data.toString());
-      this.onEvent(request);
-      const listener = this.listeners.get(request.event);
-
-      if (listener) {
-        console.log(`CC -> Event from ${ this.player?.name }: ${ request.event }`)
-        listener(request);
-      } else {
-        console.error(`CC -> Unknown event ${ request.event } from ${ this.player?.name }`)
-        this.sendError(Errors.UNKNOWN_EVENT);
-      }
+      this.handleIncomingEvent(data)
+        .catch(console.error);
     });
 
-    // Define behavour on close
     socket.on('close', () => {
       console.log(`CC -> Close connection for ${ this.player?.name }`)
       if (this.onCloseListener)
@@ -42,6 +31,33 @@ export default class ClientConnection extends Connection {
       if (this.onOpenListener)
         this.onOpenListener();
     });
+  }
+
+  async handleIncomingEvent(data) {
+    // Parse the event
+    const request = JSON.parse(data.toString());
+
+    // Find appropriate event listener to call
+    const listener = this.listeners.get(request.event);
+    if (listener) {
+      console.log(`CC -> Event from ${ this.player?.name }: ${ request.event }`)
+
+      // ClientConnection should have the information about the player
+      // that has this connection. So we can handle game events from this player.
+      if (!this.player) {
+        // getPlayer(request) will be set by the server to correctly
+        // get player information from the DB (using playerId from the request)
+        if (this.getPlayer) this.player = await this.getPlayer(request);
+      }
+
+      // Only after we got all required context, we can handle the event
+      listener(request, this.player, this.game);
+    } else {
+      console.error(`CC -> Unknown event ${ request.event } from ${ this.player?.name }`)
+      this.sendError(Errors.UNKNOWN_EVENT);
+    }
+
+    this.onEventCompletedListener(request, this.player, this.game);
   }
 
   sendPartialUpdate(game, properties) {
@@ -77,8 +93,12 @@ export default class ClientConnection extends Connection {
     });
   }
 
-  onEvent(callback) {
-    this.onEvent = callback;
+  onPlayerRequest(callback) {
+    this.getPlayer = callback;
+  }
+
+  onEventCompleted(callback) {
+    this.onEventCompletedListener = callback;
   }
 
 }

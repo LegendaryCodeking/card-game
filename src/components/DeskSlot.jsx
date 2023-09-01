@@ -1,6 +1,6 @@
-import style from "./CardDeskSlot.module.css";
+import style from "./DeskSlot.module.css";
 
-export default function CardDeskSlot({ children, owner }) {
+export default function DeskSlot({ children, owner }) {
 
   const ownerBadge = owner ? (
     <div className={`${ style.Owner } ${ owner.opponent ? style.Opponent : style.Player }`}>
