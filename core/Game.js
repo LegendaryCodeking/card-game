@@ -26,6 +26,10 @@ export default class Game {
   players = [];
   cards = Cards;
 
+  /**
+   * Constructs a game with provided data
+   * @param {any} data 
+   */
   constructor(data) {
     Object.assign(this, data);
   }
@@ -172,10 +176,20 @@ export default class Game {
     return loser.id !== player.id;
   }
 
+  /**
+   * Get the player by playerId
+   * @param {number} playerId 
+   * @returns 
+   */
   getPlayer(playerId) {
     return this.players.find(p => p.id === playerId);
   }
 
+  /**
+   * Get the only opponent by the current playerId
+   * @param {number} playerId 
+   * @returns 
+   */
   getOpponent(playerId) {
     return this.players.find(p => p.id !== playerId);
   }
@@ -245,7 +259,10 @@ export default class Game {
   }
 
   /**
-   * Completes the current turn and moves to the next one.
+   * Completes the current turn. Can be done by a certain player
+   * or without any player at all.
+   * @param {number} playerId - id of the current player
+   * @returns 
    */
   nextTurn(playerId) {
     if (playerId && !this.isPlayerTurn(playerId)) return;
