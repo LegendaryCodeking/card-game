@@ -4,7 +4,12 @@ import ClientConnection from "./io/ClientConnection.js";
 import { Errors } from "../../core/Errors.js";
 import { v4 as uuid } from "uuid";
 
+// TODO(vadim): We will need environment variables or some
+// sort of configuration for the server
 const server = new WebSocketServer({ port: 8080 });
+
+// TODO(vadim): Move anything not related to handling
+// events from client connections, to a separate class
 
 // GameId <-> Game
 const games = new Map();
@@ -36,6 +41,9 @@ server.on('connection', socket => {
 
   const connection = new ClientConnection(socket);
 
+  // TODO(vadim): We don't have any proper way to close/delete 
+  // the completed game or the game without any players.
+
   connection.onClose(() => {
     if (connection.player === undefined) return;
     closePlayerConnection(connection.player.id);
@@ -60,6 +68,7 @@ server.on('connection', socket => {
     // Find available game for this player
     // TODO(vadim): O(N)! Should be O(1)
     // TODO(vadim): Verify that player is not in some other game
+    // otherwise, kick them out of that game
     // TODO(vadim): We should prioritize the oldest available game
     let availableGame = undefined;
     for (const [id, game] of games) {

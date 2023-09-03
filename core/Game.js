@@ -343,7 +343,6 @@ export default class Game {
         this.getCard(cardRef)
           .action(actions, this, slotId, player, opponent);
 
-
         // Perform "post-action" for the effects on the player
         this.players.forEach(p => {
           p.effects

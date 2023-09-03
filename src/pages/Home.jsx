@@ -1,6 +1,7 @@
 import { useCallback, useRef } from "react";
 import Player from "../../core/Player";
 import "./Home.css"
+// TODO(vadim): Use CSS modules
 
 export default function HomePage({ player, setPlayer, connection }) {
 

@@ -1,6 +1,7 @@
 import { Effects } from "../../core/effect";
 import "./PlayerEffects.css"
 
+// TODO(vadim): Use CSS modules
 export default function PlayerEffects({ player }) {
   return (
     <div className='player-effects-container'>

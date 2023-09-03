@@ -14,6 +14,7 @@ import { useGameSession } from "../io/GameSession";
 import GameComplete from "../components/GameComplete";
 import DeskSlot from "../components/DeskSlot";
 import CardDeck from "../components/CardDeck";
+// TODO(vadim): Use CSS modules
 
 export default function GamePage({ playerInfo, connection, gameId }) {
 
@@ -53,6 +54,7 @@ export default function GamePage({ playerInfo, connection, gameId }) {
 
   // TODO(vadim): Rename "card-container" to "desk-container"
   // and "desk-container" to "game-container"
+  // TODO(vadim): Replace everything with the proper components
   return (
     <div className="desk-container">
 

@@ -1,5 +1,6 @@
 import "./PlayerHealth.css"
 
+// TODO(vadim): Use CSS modules
 export default function PlayerHealth({ player }) {
   return (
     <div className='player-health-bar'>

@@ -1,5 +1,6 @@
 import { Action } from "./Actions.js";
 import { EffectReference, Effects } from "./effect.js";
+// TODO(vadim): Rename this file to "Cards.js"
 
 export default class Card {
   id = "shield";
@@ -21,7 +22,7 @@ export class CardReference {
 }
 
 function dealDamage(actions, player, opponent, damage) {
-  if (opponent.hasEffect(Effects.HAS_SHIELD)) {
+  if (opponent.hasEffect(Effects.HAS_SHIELD.id)) {
     actions.push(Action.damageBlocked(opponent.id, player.id, damage));
     return;
   };

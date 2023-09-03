@@ -1,3 +1,4 @@
+// TODO(vadim): Rename this file to "Effects.js"
 
 export class Effect {
   id = undefined;
@@ -12,9 +13,11 @@ export class Effect {
 
 export class EffectReference {
   id = undefined;
+
   constructor(data) {
     Object.assign(this, data);
   }
+
 }
 
 export const Effects = {
