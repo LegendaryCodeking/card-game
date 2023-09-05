@@ -325,6 +325,11 @@ export default class Game {
     if (this.state === GameState.EXECUTION_TURN) {
       console.log(`GM -> perform execution turn`);
 
+      if (this.turn.slotId >= this.desk.length) {
+        this.nextTurn();
+        return;
+      }
+
       // Perform action for the current card
       const cardRef = this.desk[this.turn.slotId];
       if (cardRef) {
@@ -357,10 +362,12 @@ export default class Game {
       this.turn.slotId = slotId ?? this.desk.length;
 
       // If all cards are executed, then we need to switch to the next turn
+      /*
       if (this.turn.slotId >= this.desk.length) {
         this.nextTurn();
         return;
       }
+      */
     }
   }
 

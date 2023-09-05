@@ -63,7 +63,7 @@ export const Cards = [
       const shieldId = opponent.effects.findIndex(e => e.id === Effects.HAS_SHIELD.id);
       if (shieldId >= 0) {
         opponent.effects.splice(shieldId, 1);
-        actions.push(Action.effectRemoved(player.id, Effects.HAS_SHIELD.id));
+        actions.push(Action.effectRemoved(opponent.id, Effects.HAS_SHIELD.id));
       } else {
         dealDamage(actions, player, opponent, 6);
       }
@@ -75,13 +75,15 @@ export const Cards = [
     icon: "arrow-down-up", 
     name: "Воровство заклинания", 
     affectedCards: (slotId) => [ slotId + 1 ],
-    description: "Меняет владельца следующего заклинания. Заклинание соперника станет вашим, а ваше заклинания станет заклинанием соперника." ,
+    description: "Ворует следующее заклинание соперника." ,
     action: ( actions, game, slotId, player, opponent) => {
       const [ card, id ] = game.getNextDeskCard(slotId);
       if (!card) return;
 
-      card.owner = game.getOpponent(card.owner).id;
-      actions.push(Action.changeOwner(card));
+      if (card.owner !== player.id) {
+        card.owner = player.id;
+        actions.push(Action.changeOwner(card));
+      }
     }
   }),
 
