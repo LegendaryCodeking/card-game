@@ -13,5 +13,8 @@
   "dependencies": {
     "uuid": "^9.0.0",
     "ws": "^8.13.0"
+  },
+  "devDependencies": {
+    "swc": "^1.0.11"
   }
 }

@@ -112,7 +112,7 @@ html, body {
   padding: 1rem;
   border-top: 4px solid black;
   box-shadow: 0px 0px 40px black;
-  background-image: url("interlaced.png");
+  background-image: url("/interlaced.png");
 }
 
 .player-deck-container {
