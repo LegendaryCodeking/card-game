@@ -16,6 +16,7 @@ export function useGameSession(connection, playerInfo, gameId) {
   const [ player, setPlayer ] = useState(new PlayerInstance());
   const [ opponent, setOpponent ] = useState(new PlayerInstance());
   const [ hand, setHand ] = useState([]);
+  const [ enchants, setEnchants ] = useState([]);
   const [ desk, setDesk ] = useState([]);
   const [ actions, setActions ] = useState([]);
   const [ turn, setTurn ] = useState(new TurnState());
@@ -44,6 +45,8 @@ export function useGameSession(connection, playerInfo, gameId) {
       if (updatedOpponent) setOpponent(updatedOpponent);
 
       setHand(updatedGame.getPlayer(playerInfo.id).hand
+        .map(ref => ref === null ? undefined : ref));
+      setEnchants(updatedGame.getPlayer(playerInfo.id).enchants
         .map(ref => ref === null ? undefined : ref));
     }
 
@@ -139,6 +142,7 @@ export function useGameSession(connection, playerInfo, gameId) {
       }
     }, [ connection ]),
 
+    // TODO(vadim): Code for card selection should be refactored
     selectDeskSlot: useCallback(function (deskSlot) {
       if (deskSlot === selectedDeskSlot) {
         // Unselect the current card on the desk

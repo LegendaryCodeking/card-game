@@ -127,7 +127,11 @@ html, body {
   justify-content: center;
   align-content: center;
   justify-items: center;
-  gap: 1rem;
+  gap: 0.2rem;
+}
+
+.player-avatar:first-child {
+  margin-bottom: 1rem;
 }
 
 .player-container .card-container {

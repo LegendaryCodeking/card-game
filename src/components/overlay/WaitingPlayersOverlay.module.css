@@ -1,4 +1,5 @@
-.player-waiting {
+
+.WaitingPlayersOverlay {
   color: white;
   font-size: 2rem;
   padding-block: 1rem;

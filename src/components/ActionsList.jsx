@@ -1,5 +1,5 @@
 import { Actions } from "../../core/Actions";
-import { Effects } from "../../core/effect";
+import { Effects } from "../../core/Effects";
 import style from "./ActionsList.module.css"
 
 export default function ActionsList({ actions, game }) {

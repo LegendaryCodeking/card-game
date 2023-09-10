@@ -2,18 +2,21 @@ import "./Game.css"
 import { useState, useCallback } from "react"
 import CardView from "../components/CardSlot"
 import { GameState } from "../../core/Game";
-import PlayerHealth from "../components/PlayerHealth";
-import PlayerCards from "../components/PlayerCards";
-import PlayerAvatar from "../components/PlayerAvatar";
+import PlayerHealth from "../components/player/PlayerHealth";
+import PlayerAvatar from "../components/player/PlayerAvatar";
 import PlayerEffects from "../components/PlayerEffects";
 import ActionsView from "../components/ActionsList";
-import FullscreenLayout from "../components/FullscreenLayout";
-import PlayerWaiting from "../components/PlayerWaiting";
-import CardInfo from "../components/CardInfo";
 import { useGameSession } from "../io/GameSession";
-import GameComplete from "../components/GameComplete";
 import DeskSlot from "../components/DeskSlot";
 import CardDeck from "../components/CardDeck";
+import { Cards } from "../../core/Cards";
+import PlayerMana from "../components/player/PlayerMana";
+
+import CardInfoOverlay from "../components/overlay/CardInfoOverlay";
+import FullscreenOverlay from "../components/overlay/FullscreenOverlay";
+import WaitingPlayersOverlay from "../components/overlay/WaitingPlayersOverlay";
+import GameCompleteOverlay from "../components/overlay/GameCompleteOverlay";
+
 // TODO(vadim): Use CSS modules
 
 export default function GamePage({ playerInfo, connection, gameId }) {
@@ -43,13 +46,24 @@ export default function GamePage({ playerInfo, connection, gameId }) {
   const onInfo = useCallback((card) => setShowCardInfo(card), []);
   const onCloseInfo = useCallback(() => setShowCardInfo(undefined), []);
 
-  let fullscreenLayoutComponent = undefined;
+  let fullscreenOverlay = undefined;
   if (game.state === GameState.WAITING_FOR_PLAYERS) {
-    fullscreenLayoutComponent = (<PlayerWaiting />)
+    fullscreenOverlay = (
+    <FullscreenOverlay>
+      <WaitingPlayersOverlay />
+    </FullscreenOverlay>)
+
   } else if (game.state === GameState.COMPLETE) {
-    fullscreenLayoutComponent = (<GameComplete game={ game } player={ player }/>);
+    fullscreenOverlay = (
+    <FullscreenOverlay>
+      <GameCompleteOverlay game={ game } player={ player }/> 
+    </FullscreenOverlay>);
+
   } else if (showCardInfo) {
-    fullscreenLayoutComponent = (<CardInfo card={ showCardInfo } onClose={ onCloseInfo }/>)
+    fullscreenOverlay = (
+    <FullscreenOverlay>
+      <CardInfoOverlay card={ showCardInfo } onClose={ onCloseInfo }/>
+    </FullscreenOverlay>)
   } 
 
   // TODO(vadim): Rename "card-container" to "desk-container"
@@ -58,10 +72,10 @@ export default function GamePage({ playerInfo, connection, gameId }) {
   return (
     <div className="desk-container">
 
-      { fullscreenLayoutComponent ? <FullscreenLayout>{ fullscreenLayoutComponent }</FullscreenLayout> : undefined}
+      { fullscreenOverlay}
 
       <div className="opponent-container">
-        <PlayerCards player={ opponent } />
+        <PlayerMana player={ opponent }/>
         <PlayerAvatar player={ opponent }/>
         <PlayerHealth player={ opponent } />
       </div>
@@ -75,24 +89,25 @@ export default function GamePage({ playerInfo, connection, gameId }) {
         <div className='center-container'>
           <div className='player-badge-container top'>
             { opponentBadge }
+            { playerBadge }
             { game.state === GameState.EXECUTION_TURN ? <PlayerEffects player={opponent} /> : undefined }
           </div>
 
           <div className="inner-card-container">
-            { desk.map((ref, id) => 
+            { desk.map((instance, id) => 
               <DeskSlot key={id} 
-                owner={ ref ? { 
-                  name: game.getPlayer(ref.owner).name, 
-                  opponent: game.getPlayer(ref.owner).id !== player.id
+                owner={ instance ? { 
+                  name: game.getPlayer(instance.owner).name, 
+                  opponent: game.getPlayer(instance.owner).id !== player.id
                 } : undefined }
                 >
                 <CardView 
-                  card={ ref ? game.cards.find(c => c.id === ref.id) : undefined } 
+                  card={ instance ? Cards.getCardByInstance(instance) : undefined } 
                   enabled={ game.isPlayerTurn(player.id) && gameSession.availableDeskSlots[id] }
                   onClick={ () => gameSession.selectDeskSlot(id) } 
                   selected={ id === gameSession.selectedDeskSlot } 
                   highlighted={ game.isSlotExecuted(id) }
-                  onInfo={ () => onInfo(game.getCard(ref)) }
+                  onInfo={ () => onInfo(Cards.getCardByInstance(instance)) }
                 />
               </DeskSlot>
               ) 
@@ -100,7 +115,6 @@ export default function GamePage({ playerInfo, connection, gameId }) {
           </div>
 
           <div className='player-badge-container bottom'>
-            { playerBadge }
             { game.state === GameState.EXECUTION_TURN ? <PlayerEffects player={player} /> : undefined }
           </div>
         </div>
@@ -121,15 +135,16 @@ export default function GamePage({ playerInfo, connection, gameId }) {
         <div className="player-status-container">
           <PlayerAvatar player={ player }/>
           <PlayerHealth player={ player }/>
+          <PlayerMana player={ player }/>
         </div>
         <div className="card-container">
-          { hand.map((ref, id) => 
+          { hand.map((instance, id) => 
             <CardView 
               key={id} 
-              card={ ref ? game.getCard(ref) : undefined } 
+              card={ instance ? Cards.getCardByInstance(instance) : undefined } 
               enabled={ game.isPlayerTurn(player.id) }
               onClick={ () => gameSession.selectHandSlot(id) }
-              onInfo={ () => onInfo(game.getCard(ref)) }
+              onInfo={ () => onInfo(Cards.getCardByInstance(instance)) }
               selected={ id === gameSession.selectedHandSlot }/>)}
         </div>
         <div className="player-deck-container">

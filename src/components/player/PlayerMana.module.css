@@ -1,0 +1,64 @@
+
+.PlayerMana {
+  display: grid;
+  grid-auto-flow: column;
+  border: 2px solid rgba(0,0,0,0.25);
+  min-width: 5rem;
+  border-radius: 1rem;
+  padding-block: 0.5rem;
+  padding-inline: 1rem;
+  background-color: white;
+  justify-items: center;
+
+  .ManaIcon {
+    border-radius: 50%;
+    display: grid;
+    justify-content: center;
+    color: rgba(0, 82, 189, 0.663);
+    font-size: 1.1rem;
+
+    min-width: 1.2rem;
+    min-height: 1.2rem;
+    max-width: 1.2rem;
+    max-height: 1.2rem;
+
+    &.ManaFilled {
+      color: rgb(0, 82, 189);
+      --background-color: rgba(106, 148, 238, 0.25);
+      background-color: var(--background-color);
+      box-shadow: 0px 0px 2px 2px var(--background-color);
+    }
+
+    &.ManaWasted {
+      color: rgb(0, 154, 189);
+      --background-color: rgba(106, 225, 238, 0.25);
+      background-color: var(--background-color);
+      box-shadow: 0px 0px 2px 2px var(--background-color);
+
+      animation-duration: 0.75s;
+      animation-name: blink;
+      animation-iteration-count: infinite;
+
+    }
+
+    &.ManaLack {
+      color: rgb(189, 0, 72);
+      --background-color: rgba(106, 225, 238, 0.25);
+      background-color: var(--background-color);
+    }
+  }
+}
+
+      @keyframes blink {
+        from {
+          color: rgb(0, 154, 189);
+        }
+        
+        50% {
+          color: rgb(23, 202, 242);
+        }
+
+        to {
+          color: rgb(0, 154, 189);
+        }
+      }

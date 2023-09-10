@@ -1,4 +1,4 @@
-import { Effects } from "../../core/effect";
+import { Effects } from "../../core/Effects";
 import "./PlayerEffects.css"
 
 // TODO(vadim): Use CSS modules

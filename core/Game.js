@@ -1,5 +1,5 @@
 import { PlayerInstance } from "./Player.js";
-import { CardReference, Cards } from "./card.js";
+import { Cards } from "./Cards.js";
 
 export const GameState = {
   PLAYER_TURN: "PLAYER_TURN",
@@ -24,7 +24,13 @@ export default class Game {
   state = GameState.WAITING_FOR_PLAYERS;
   desk = [ undefined, undefined, undefined, undefined, undefined, undefined ];
   players = [];
-  cards = Cards;
+  cards = [
+    Cards.ARROW.id,
+    Cards.FIREBALL.id,
+    Cards.REPEAT.id,
+    Cards.SHIELD.id,
+    Cards.REVERSE.id,
+  ];
 
   /**
    * Constructs a game with provided data
@@ -41,8 +47,9 @@ export default class Game {
    */
   addPlayer(playerId, properties) {
     console.log("GM -> Player added");
-    const player = new PlayerInstance({ id: playerId, ...properties });
+    const player = new PlayerInstance({ id: playerId, mana: 0, ...properties });
     this.players.push(player);
+    player.enchants.push(Cards.PIN.createInstance({ owner: player.id }));
 
     // Add 6 card slots to the player hand
     for (let i = 0; i < 6; i++) {
@@ -50,7 +57,7 @@ export default class Game {
       this.pullCard(playerId, false);
     }
 
-    if (this.players.length === 2) this.nextTurn();
+    if (this.players.length === 2) this.completeTurn();
     
     if (!this.turn.playerId) {
       this.turn.playerId = player.id;
@@ -194,6 +201,33 @@ export default class Game {
     return this.players.find(p => p.id !== playerId);
   }
 
+  canUseEnchant(playerId, slotId) {
+    if (!this.isPlayerTurn(playerId)) return false;
+    if (this.getPlayer(playerId).enchants[slotId] === undefined) return false;
+    return true;
+  }
+
+  canUseEnchantOn(playerId, slotId, targetSlotId) {
+    const player = this.getPlayer(playerId);
+    const manaCost = this.getEnchantManaCostFor(playerId, slotId, targetSlotId);
+    return player.mana >= manaCost;
+  }
+
+  getEnchantManaCostFor(playerId, slotId, targetSlotId) {
+    const cardInstance = this.getPlayer(playerId).enchants[slotId];
+    return cardInstance.getManaCost({ targetSlotId });
+  }
+
+  useEnchant(playerId, slotId, targetSlotId) {
+    if (!this.canUseEnchant(playerId, slotId)) return;
+    if (!this.canUseEnchantOn(playerId, slotId, targetSlotId)) return;
+
+    const player = this.getPlayer(playerId);
+    const cardInstance = player.enchants[slotId];
+    player.mana -= this.getEnchantManaCostFor(playerId, slotId, targetSlotId);
+    cardInstance.action({ game: this, player, targetSlotId });
+  }
+
   getPlayerCardsCount(playerId) {
     const cardsOnDesk = this.desk.filter((ref) => ref?.owner === playerId).length;
     const cardsOnHand = this.getPlayer(playerId).hand
@@ -223,8 +257,11 @@ export default class Game {
     return [ undefined, undefined ];
   }
 
-  getCard(cardRef) {
-    return this.cards.find(c => c.id === cardRef.id);
+  getLastDeskCard() {
+    for (let i = this.desk.length - 1; i >= 0; i--) {
+      if (this.desk[i] !== undefined) return [ this.desk[i], i];
+    }
+    return [ undefined, undefined ];
   }
 
   // TODO(vadim): Rename to "isCardSlotIsExecuting"
@@ -254,8 +291,18 @@ export default class Game {
     const cardId = Math.round(Math.random() * this.cards.length) % this.cards.length;
     const availableSlot = player.hand.findIndex(ref => !ref);
     if (availableSlot >= 0) {
-      player.hand[availableSlot] = new CardReference(this.cards[cardId].id, player.id);
+      const card = Cards[this.cards[cardId]];
+      player.hand[availableSlot] = card.createInstance({ owner: player.id });
     }
+  }
+
+  /**
+   * Give mana to the player
+   * @param {number} playerId 
+   */
+  giveMana(playerId) {
+    const player = this.getPlayer(playerId);
+    player.mana = Math.min(player.mana + 1, 3);
   }
 
   /**
@@ -264,7 +311,8 @@ export default class Game {
    * @param {number} playerId - id of the current player
    * @returns 
    */
-  nextTurn(playerId) {
+  completeTurn(playerId) {
+    // TODO(vadim): this code will probably fail if "playerId == 0"
     if (playerId && !this.isPlayerTurn(playerId)) return;
 
     // We can't do anything until all players are in the game
@@ -274,6 +322,7 @@ export default class Game {
       // If the game has started:
       // Select the first player for the first turn
       this.turn.playerId = this.players[0].id;
+      this.giveMana(this.turn.playerId);
       this.state = GameState.PLAYER_TURN;
       this.turn.turns += 1;
 
@@ -307,6 +356,7 @@ export default class Game {
         this.desk = [undefined, undefined, undefined, undefined, undefined, undefined];
         this.players.forEach(p => p.effects = []);
         this.turn.turns += 1;
+        this.giveMana(this.turn.playerId);
       }
     }
 
@@ -326,15 +376,15 @@ export default class Game {
       console.log(`GM -> perform execution turn`);
 
       if (this.turn.slotId >= this.desk.length) {
-        this.nextTurn();
+        this.completeTurn();
         return;
       }
 
       // Perform action for the current card
-      const cardRef = this.desk[this.turn.slotId];
-      if (cardRef) {
-        const player = this.getPlayer(cardRef.owner);
-        const opponent = this.getOpponent(cardRef.owner);
+      const cardInstance = this.desk[this.turn.slotId];
+      if (cardInstance) {
+        const player = this.getPlayer(cardInstance.owner);
+        const opponent = this.getOpponent(cardInstance.owner);
         const slotId = this.turn.slotId;
         
         // Perform "pre-action" for the effects on the player
@@ -345,8 +395,8 @@ export default class Game {
             .forEach(a => a(actions, this, slotId, player, opponent));
         })
 
-        this.getCard(cardRef)
-          .action(actions, this, slotId, player, opponent);
+        const context = { actions, game: this, slotId, player, opponent };
+        Cards.getCardByInstance(cardInstance).action(context);
 
         // Perform "post-action" for the effects on the player
         this.players.forEach(p => {
@@ -360,14 +410,6 @@ export default class Game {
       // Select the next card for the next execution
       const [ card, slotId ] = this.getNextDeskCard(this.turn.slotId);
       this.turn.slotId = slotId ?? this.desk.length;
-
-      // If all cards are executed, then we need to switch to the next turn
-      /*
-      if (this.turn.slotId >= this.desk.length) {
-        this.nextTurn();
-        return;
-      }
-      */
     }
   }
 

@@ -156,7 +156,7 @@ server.on('connection', socket => {
   });
 
   connection.onCompleteTurn((request, player, game) => {
-    game.nextTurn();
+    game.completeTurn(player.id);
 
     getPlayersConnections(game.players.map(p => p.id))
       .forEach(con => con.sendPartialUpdate(game, [ 'state', 'turn']))

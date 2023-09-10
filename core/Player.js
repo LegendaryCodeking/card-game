@@ -1,4 +1,14 @@
 
+export default class Player {
+  
+  id = 1;
+  name = "vadim";
+
+  constructor(data) {
+    Object.assign(this, data);
+  }
+}
+
 /**
  * Contains game related player information.
  */
@@ -9,24 +19,25 @@ export class PlayerInstance {
   name = "player";
   health = 50;
   hand = [];
+  enchants = [];
   pullSize = 0;
   effects = [];
+  mana = 0;
 
   constructor(data) {
     Object.assign(this, data);
   }
 
-  hasEffect(effectId) {
+  addEffect(effectInstance) {
+    this.effects.push(effectInstance);
+  }
+
+  hasEffectById(effectId) {
     return this.effects.find(e => e.id === effectId) !== undefined;
   }
-}
 
-export default class Player {
-  
-  id = 1;
-  name = "vadim";
-
-  constructor(data) {
-    Object.assign(this, data);
+  removeEffectById(effectId) {
+    const id = this.effects.findIndex(e => e.id === effectId);
+    if (id >= 0) this.effects.splice(id, 1);
   }
 }

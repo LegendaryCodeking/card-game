@@ -1,5 +1,5 @@
 
-.card-info {
+.CardInfoOverlay {
   --bg-color: rgba(0,0,0, 0.663);
 
   display: grid;
@@ -13,7 +13,7 @@
   border-radius: 3rem;
 }
 
-.card-description {
+.CardInfoDescription {
   background-color: white;
   border-radius: 10px;
   border: 4px solid grey;
@@ -23,11 +23,11 @@
   min-width: 25rem;
 }
 
-.card-info-close {
+.CardInfoClose {
   margin-left: 1.5rem;
 }
 
-.close-button {
+.CloseButton {
   background-color: rgba(0,0,0,0);
   color: white;
   border-radius: 50%;
@@ -35,6 +35,6 @@
   border: 0px solid grey;
 }
 
-.close-button:hover {
+.CloseButton:hover {
   cursor: pointer;
 }

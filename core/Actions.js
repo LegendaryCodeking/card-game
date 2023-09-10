@@ -7,6 +7,7 @@ export const Actions = {
   DAMAGE_BLOCKED: "DAMAGE_BLOCKED",
 }
 
+// TODO(vadim): Rename to "Actions" and merge with the previous structure
 export class Action {
 
   constructor(props) {
