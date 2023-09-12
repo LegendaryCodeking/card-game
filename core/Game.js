@@ -24,6 +24,7 @@ export default class Game {
   state = GameState.WAITING_FOR_PLAYERS;
   desk = [ undefined, undefined, undefined, undefined, undefined, undefined ];
   players = [];
+  // TODO: Add probabilities
   cards = [
     Cards.ARROW.id,
     Cards.FIREBALL.id,
@@ -218,6 +219,7 @@ export default class Game {
     return cardInstance.getManaCost({ targetSlotId });
   }
 
+  // TODO(vadim): This is temporary
   useEnchant(playerId, slotId, targetSlotId) {
     if (!this.canUseEnchant(playerId, slotId)) return;
     if (!this.canUseEnchantOn(playerId, slotId, targetSlotId)) return;
@@ -321,6 +323,8 @@ export default class Game {
     if (this.state === GameState.WAITING_FOR_PLAYERS) {
       // If the game has started:
       // Select the first player for the first turn
+
+      // TODO(vadim): Pick a random one for that
       this.turn.playerId = this.players[0].id;
       this.giveMana(this.turn.playerId);
       this.state = GameState.PLAYER_TURN;
@@ -395,8 +399,8 @@ export default class Game {
             .forEach(a => a(actions, this, slotId, player, opponent));
         })
 
-        const context = { actions, game: this, slotId, player, opponent };
-        Cards.getCardByInstance(cardInstance).action(context);
+        const context = { actions, game: this, slotId, player, opponent, cardInstance };
+        cardInstance.action(context);
 
         // Perform "post-action" for the effects on the player
         this.players.forEach(p => {

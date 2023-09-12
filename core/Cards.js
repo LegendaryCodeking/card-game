@@ -2,15 +2,9 @@ import { Action } from "./Actions.js";
 import { Effects } from "./Effects.js";
 
 export const CardType = {
-  /**
-   * Spell is a card which can be place on the desk and it is executed on "Execution Turn".
-   */
+  // Anything that player can place on the desk
   SPELL: "SPELL",
-
-  /**
-   * Enchant is a card that changes the behavour of selected card on the desk. 
-   * It can't be placed on the desk itself and persists always in the hand of the player.
-   */
+  // Add buffs to cards on the desk.
   ENCHANT: "ENCHANT",
 }
 
@@ -26,16 +20,30 @@ export default class Card {
     Object.assign(this, data);
   }
 
+  /**
+   * Returns a mana cost of this card for a particular context.
+   */
+  getManaCost(context) {
+    return 0;
+  }
+
+  /**
+   * Executes the card with the given context.
+   * @param {{ game, slotId: number, player, opponent, actions }} context 
+   */
+  action(context) {
+  }
+
+  /**
+   * Checks if the card on the desk can be affected by this card.
+   * @param {*} context 
+   */
+  isAffected(context) {
+
+  }
+
   createInstance(props) {
     return new CardInstance({ ...this, ...props });
-  }
-}
-
-export class CardInstance {
-  constructor({ id, owner, pinned = false }) {
-    this.id = id;
-    this.owner = owner;
-    this.pinned = pinned;
   }
 }
 
@@ -58,8 +66,7 @@ export const Cards = {
     description: "Создает щит который блокирует весь последующий урон. Некоторые заклинания способны уничтожить данный щит.",
     type: CardType.SPELL,
 
-    action(context) {
-      const { actions, player } = context;
+    action({ actions, player }) {
       actions.push(Action.effectAdded(player.id, Effects.HAS_SHIELD.id))
       player.addEffect(Effects.HAS_SHIELD.createInstance());
     }
@@ -71,10 +78,10 @@ export const Cards = {
     name: "Магическая стрела", 
     description: "Наносит 3 урона сопернику.",
     type: CardType.SPELL,
+    damage: 3,
 
-    action(context) {
-      const { actions, player, opponent } = context;
-      dealDamage( actions, player, opponent, 3);
+    action({ actions, player, opponent }) {
+      dealDamage( actions, player, opponent, this.damage);
     }
    }),
 
@@ -84,15 +91,14 @@ export const Cards = {
     name: "Огненный шар", 
     description: "Уничтожает один щит соперника. Если щитов у соперника нет, то наносит 6 урона.",
     type: CardType.SPELL,
+    damage: 6,
 
-    action(context) {
-      const { actions, player, opponent } = context;
-
+    action({ actions, player, opponent }) {
       if (opponent.hasEffectById(Effects.HAS_SHIELD.id)) {
         opponent.removeEffectById(Effects.HAS_SHIELD.id);
         actions.push(Action.effectRemoved(opponent.id, Effects.HAS_SHIELD.id));
       } else {
-        dealDamage(actions, player, opponent, 6);
+        dealDamage(actions, player, opponent, this.damage);
       }
     }
   }),
@@ -105,6 +111,7 @@ export const Cards = {
     type: CardType.SPELL,
 
     // TODO(vadim): Rename to "isAffected" and "currentSlotId" to "slotId"
+    // and accept the object
     isCardAffected(game, currentSlotId, targetSlotId) {
       if (game.desk[targetSlotId]) {
         const [ cardInstance, slotId ] = game.getNextDeskCard(currentSlotId);
@@ -113,8 +120,7 @@ export const Cards = {
       return false;
     },
 
-    action(context) {
-      const { actions, game, slotId, player } = context;
+    action({ actions, game, slotId, player }) {
       game.desk.forEach((cardInstance, cardSlotId) => {
         if (this.isCardAffected(game, slotId, cardSlotId)) {
           cardInstance.owner = player.id;
@@ -132,6 +138,7 @@ export const Cards = {
     type: CardType.SPELL,
 
     // TODO(vadim): Rename to "isAffected" and "currentSlotId" to "slotId"
+    // and accept the object
     /**
      * Returns true if card in targetSlotId is affected by this spell.
      */
@@ -150,11 +157,51 @@ export const Cards = {
         if (cardSlotId === slotId) return; 
 
         if (this.isCardAffected(game, slotId, cardSlotId)) {
-          Cards.getCardByInstance(cardInstance).action({ ...context, slotId: cardSlotId });
+          cardInstance.action({ ...context, slotId: cardSlotId });
         }
       });
     },
   }),
+
+  PIN: new Card({
+    id: "PIN",
+    icon: "pin-angle",
+    name: "Закрепление",
+    description: "Закрепляет выбранную вами карту. Данную карту не сможет перемещать ваш соперник.",
+    type: CardType.ENCHANT,
+
+    isAffected({ game, targetSlotId }) {
+      const cardInstance = game.desk[targetSlotId];
+      return cardInstance !== undefined;
+    },
+
+    getManaCost({ targetSlotId }) {
+      return targetSlotId > 2 ? 3 - (targetSlotId - 3) : 3 - targetSlotId;
+    },
+
+    action({ game, targetSlotId }) {
+      const cardInstance = game.desk[targetSlotId];
+      if (cardInstance) cardInstance.pinned = true;
+    }
+  }),
+
+  // Spells:
+  //  * Shield        (defense)
+  //  * Magic Arrow   (3 damage)
+  //  * Fireball      (6 damage)
+  //  * Repeat        (mechanics)
+  //  * Steal         (mechanics)
+
+  // Special Spells:
+  //  * Heal          (1 mana)    (9 heal)    (1/12 % prob)
+  //  * Saint Sheild  (1 mana)                (1/12 % prob)
+
+  // Enchants (advantage on attack):
+  //  * Enchain   (1-3 mana)    - pin one card
+  //  * Enlarge   (1 mana)      - card deals 3 more damage
+
+
+  /** Everything below is optionall gameplay right now */
 
   SAINT_SHIELD: new Card({
     id: "SAINT_SHIELD",
@@ -181,34 +228,11 @@ export const Cards = {
 
       const [ cardInstance, cardSlot ] = game.getLastDeskCard();
       if (cardInstance && cardSlot !== slotId) {
-        Cards.getCardByInstance(cardInstance).action({ ...context, slotId: cardSlot });
+        cardInstance.action({ ...context, slotId: cardSlot });
       }
     }
   }),
 
-  PIN: new Card({
-    id: "PIN",
-    icon: "pin-angle",
-    name: "Закрепление",
-    description: "Закрепляет выбранную вами карту. Данную карту не сможет перемещать ваш соперник.",
-    type: CardType.ENCHANT,
-
-    isAffected({ game, targetSlotId }) {
-      const cardInstance = game.desk[targetSlotId];
-      return cardInstance !== undefined;
-    },
-
-    getManaCost({ targetSlotId }) {
-      return targetSlotId > 2 ? 3 - (targetSlotId - 3) : 3 - targetSlotId;
-    },
-
-    action({ game, targetSlotId }) {
-      const cardInstance = game.desk[targetSlotId];
-      if (cardInstance) {
-        cardInstance.pinned = true;
-      }
-    }
-  }),
 
   getCardById(cardId) {
     return this[cardId];
@@ -219,3 +243,21 @@ export const Cards = {
   }
 
 };
+
+export class CardInstance {
+
+  constructor({ id, owner, pinned = false }) {
+    this.id = id;
+    this.owner = owner;
+    this.pinned = pinned;
+  }
+
+  getCard() {
+    return Cards.getCardByInstance(this);
+  }
+
+  action(context) {
+    return Cards.getCardByInstance(this).action(context);
+  }
+
+}

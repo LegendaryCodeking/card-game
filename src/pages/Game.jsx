@@ -16,6 +16,7 @@ import CardInfoOverlay from "../components/overlay/CardInfoOverlay";
 import FullscreenOverlay from "../components/overlay/FullscreenOverlay";
 import WaitingPlayersOverlay from "../components/overlay/WaitingPlayersOverlay";
 import GameCompleteOverlay from "../components/overlay/GameCompleteOverlay";
+import EnchantUse from "../components/EnchantUse";
 
 // TODO(vadim): Use CSS modules
 
@@ -116,6 +117,7 @@ export default function GamePage({ playerInfo, connection, gameId }) {
 
           <div className='player-badge-container bottom'>
             { game.state === GameState.EXECUTION_TURN ? <PlayerEffects player={player} /> : undefined }
+            { game.isPlayerTurn(player.id) ? <EnchantUse /> : undefined }
           </div>
         </div>
 

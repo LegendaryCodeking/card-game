@@ -22,12 +22,17 @@ export function useGameSession(connection, playerInfo, gameId) {
   const [ turn, setTurn ] = useState(new TurnState());
 
   // Selected hand and desk slots
+
+  // FREE_MOVE - When player can move freely cards from one place to another
+  // ENCHANT_TARGET - WHen player has selected enchantment to use
+  // LOCKED - When it's another player turn
+  const [ mode, setMode ] = useState('FREE_MOVE');
+
   const [ selectedDeskSlot, setSelectedDeskSlot ] = useState(undefined);
   const [ selectedHandSlot, setSelectedHandSlot ] = useState(undefined);
-  const [ canPullCard, setCanPullCard ] = useState(false);
-
-  // Available card slots for desk
   const [ availableDeskSlots, setAvailableDeskSlots ] = useState([]);
+
+  const [ canPullCard, setCanPullCard ] = useState(false);
 
   /**
    * Updates the local state of the game based on the response from the game server.
@@ -143,25 +148,32 @@ export function useGameSession(connection, playerInfo, gameId) {
     }, [ connection ]),
 
     // TODO(vadim): Code for card selection should be refactored
-    selectDeskSlot: useCallback(function (deskSlot) {
-      if (deskSlot === selectedDeskSlot) {
+    selectDeskSlot: useCallback(function (slotId) {
+      if (mode === 'ENCHANT_TARGET') {
+        // 1. Verify that we can enchant the current slotId
+        // 2. Send info that we want to use enchant
+        // 3. Set our current mode back to "FREE_MOVE" 
+        return;
+      }
+
+      if (slotId === selectedDeskSlot) {
         // Unselect the current card on the desk
         setSelectedDeskSlot(undefined);
         resetAvailableDeskSlots();
 
-      } else if (desk[deskSlot]) {
+      } else if (desk[slotId]) {
         // If a certain card is selected
-        setSelectedDeskSlot(deskSlot);
+        setSelectedDeskSlot(slotId);
         setSelectedHandSlot(undefined);
-        showAvailableDeskSlotsForDeskCard(deskSlot);
+        showAvailableDeskSlotsForDeskCard(slotId);
 
       } else {
         // Player moves card to the free card slot
         if (selectedHandSlot !== undefined) {
-          this.moveCardFromHandToDesk(selectedHandSlot, deskSlot);
+          this.moveCardFromHandToDesk(selectedHandSlot, slotId);
           setSelectedHandSlot(undefined);
         } else if (selectedDeskSlot !== undefined) {
-          this.moveCardFromDeskToDesk(selectedDeskSlot, deskSlot);
+          this.moveCardFromDeskToDesk(selectedDeskSlot, slotId);
           setSelectedDeskSlot(undefined);
         }
         resetAvailableDeskSlots();

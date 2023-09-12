@@ -1,4 +1,5 @@
 import style from "./DeskSlot.module.css";
+import Mana from "./Mana";
 
 export default function DeskSlot({ children, owner }) {
 
@@ -11,6 +12,7 @@ export default function DeskSlot({ children, owner }) {
   return (
     <div className={ style.CardDeskSlot }>
       <div className={ style.Effects }>
+        <Mana />
       </div>
       { children }
       <div className={ style.OwnerContainer }>
