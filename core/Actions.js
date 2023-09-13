@@ -5,6 +5,7 @@ export const Actions = {
   EFFECT_REMOVED: "EFFECT_REMOVED",
   CHANGE_OWNER: "CHANGE_OWNER",
   DAMAGE_BLOCKED: "DAMAGE_BLOCKED",
+  HEAL: "HEAL",
 }
 
 // TODO(vadim): Rename to "Actions" and merge with the previous structure
@@ -29,6 +30,10 @@ export class Action {
 
   static effectRemoved(target, effectId) {
     return new Action({ type: Actions.EFFECT_REMOVED, target, effectId });
+  }
+
+  static heal(target, heal) {
+    return new Action({ type: Actions.HEAL, target, heal });
   }
 
   static changeOwner(target) {

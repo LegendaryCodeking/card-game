@@ -17,6 +17,7 @@ export const Events = {
   MOVE_CARD_FROM_HAND_TO_HAND: "MOVE_CARD_FROM_HAND_TO_HAND",
   COMPLETE_TURN: "COMPLETE_TURN",
   PULL_CARD: "PULL_CARD",
+  USE_CARD: "USE_CARD",
 
   /**
    * For ClientConnection and ServerConnection we often need to set event listeners

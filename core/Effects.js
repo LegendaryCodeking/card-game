@@ -46,12 +46,4 @@ export class EffectInstance {
   constructor({ id }) {
     this.id = id;
   }
-
-  hasTrait(trait) {
-    return Effects.getEffectByInstance(this).hasTrait(trait);
-  }
-
-  getEffect() {
-    return Effects.getEffectByInstance(this);
-  }
 }

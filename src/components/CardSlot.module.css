@@ -26,7 +26,7 @@
   &.CardSlotDisabled {
     background-color: rgba(255, 255, 255, 0.3) !important;
     border: 1px solid rgba(0,0,0,0.1) !important;
-
+    opacity: 0.75;
   }
 }
 
@@ -76,8 +76,26 @@
     align-items: center;
   }
 
-  .InfoButton {
+  .TopOverlay {
     position: absolute;
+    display: grid;
+    grid-auto-flow: column;
+    width: 128px;
+    justify-content: space-between;
+    align-items: center;
+
+    .Cost {
+      background-color: blue;
+      color: white;
+      padding-inline: 0.5rem;
+      padding-block: 0.25rem;
+      border-radius: 1rem;
+      margin-right: 0.25rem;
+      font-weight: bold;
+    }
+  }
+
+  .InfoButton {
     background-color: rgba(0,0,0,0);
     font-size: 1.2rem;
     margin: 0.4rem;

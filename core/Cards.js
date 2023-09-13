@@ -20,28 +20,6 @@ export default class Card {
     Object.assign(this, data);
   }
 
-  /**
-   * Returns a mana cost of this card for a particular context.
-   */
-  getManaCost(context) {
-    return 0;
-  }
-
-  /**
-   * Executes the card with the given context.
-   * @param {{ game, slotId: number, player, opponent, actions }} context 
-   */
-  action(context) {
-  }
-
-  /**
-   * Checks if the card on the desk can be affected by this card.
-   * @param {*} context 
-   */
-  isAffected(context) {
-
-  }
-
   createInstance(props) {
     return new CardInstance({ ...this, ...props });
   }
@@ -157,7 +135,8 @@ export const Cards = {
         if (cardSlotId === slotId) return; 
 
         if (this.isCardAffected(game, slotId, cardSlotId)) {
-          cardInstance.action({ ...context, slotId: cardSlotId });
+          const card = Cards.getCardByInstance(cardInstance);
+          card.action({ ...context, slotId: cardSlotId });
         }
       });
     },
@@ -176,12 +155,29 @@ export const Cards = {
     },
 
     getManaCost({ targetSlotId }) {
-      return targetSlotId > 2 ? 3 - (targetSlotId - 3) : 3 - targetSlotId;
+      return targetSlotId > 2 ? 3 - (targetSlotId - 3) : targetSlotId + 1;
     },
 
     action({ game, targetSlotId }) {
       const cardInstance = game.desk[targetSlotId];
       if (cardInstance) cardInstance.pinned = true;
+    }
+  }),
+
+  HEAL: new Card({
+    id: "HEAL",
+    icon: "patch-plus",
+    name: "Лечение",
+    description: "Восстанавливает 9 здоровья",
+    type: CardType.SPELL,
+
+    getManaCost(context) {
+      return 1;
+    },
+
+    action({ actions, player }) {
+      actions.push(Action.heal(player.id, 9));
+      player.health += 9;
     }
   }),
 
@@ -250,14 +246,6 @@ export class CardInstance {
     this.id = id;
     this.owner = owner;
     this.pinned = pinned;
-  }
-
-  getCard() {
-    return Cards.getCardByInstance(this);
-  }
-
-  action(context) {
-    return Cards.getCardByInstance(this).action(context);
   }
 
 }

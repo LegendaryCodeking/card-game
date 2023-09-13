@@ -25,13 +25,7 @@ export default function GamePage({ playerInfo, connection, gameId }) {
   const [ showCardInfo, setShowCardInfo ] = useState(undefined);
 
   const gameSession = useGameSession(connection, playerInfo, gameId);
-
-  const game = gameSession.game;
-  const player = gameSession.player;
-  const opponent = gameSession.opponent;
-  const hand = gameSession.hand;
-  const desk = gameSession.desk;
-  const actions = gameSession.actions;
+  const { game, player, opponent, hand, desk, actions, manaCost } = gameSession;
 
   let opponentBadge = undefined;
   let playerBadge = undefined;
@@ -73,7 +67,7 @@ export default function GamePage({ playerInfo, connection, gameId }) {
   return (
     <div className="desk-container">
 
-      { fullscreenOverlay}
+      { fullscreenOverlay }
 
       <div className="opponent-container">
         <PlayerMana player={ opponent }/>
@@ -101,6 +95,7 @@ export default function GamePage({ playerInfo, connection, gameId }) {
                   name: game.getPlayer(instance.owner).name, 
                   opponent: game.getPlayer(instance.owner).id !== player.id
                 } : undefined }
+                enchantCost={ gameSession.enchantCost[id] }
                 >
                 <CardView 
                   card={ instance ? Cards.getCardByInstance(instance) : undefined } 
@@ -117,7 +112,7 @@ export default function GamePage({ playerInfo, connection, gameId }) {
 
           <div className='player-badge-container bottom'>
             { game.state === GameState.EXECUTION_TURN ? <PlayerEffects player={player} /> : undefined }
-            { game.isPlayerTurn(player.id) ? <EnchantUse /> : undefined }
+            { game.isPlayerTurn(player.id) ? <EnchantUse onClick={ gameSession.selectEnchant }/> : undefined }
           </div>
         </div>
 
@@ -137,7 +132,7 @@ export default function GamePage({ playerInfo, connection, gameId }) {
         <div className="player-status-container">
           <PlayerAvatar player={ player }/>
           <PlayerHealth player={ player }/>
-          <PlayerMana player={ player }/>
+          <PlayerMana player={ player } cost={ manaCost }/>
         </div>
         <div className="card-container">
           { hand.map((instance, id) => 

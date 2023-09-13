@@ -166,14 +166,14 @@ server.on('connection', socket => {
     game.moveCardFromHandToDesk(player.id, request.handSlotId, request.deskSlotId);
 
     getPlayersConnections([ game.getOpponent(player.id)?.id ])
-      .forEach(con => con.sendPartialUpdate(game, ['desk']));
+      .forEach(con => con.sendPartialUpdate(game, [ 'desk', 'players' ]));
   });
 
   connection.onMoveCardFromDeskToHand((request, player, game)=> {
     game.moveCardFromDeskToHand(player.id, request.deskSlotId, request.handSlotId);
 
     getPlayersConnections([ game.getOpponent(player.id)?.id ])
-      .forEach(con => con.sendPartialUpdate(game, ['desk']));
+      .forEach(con => con.sendPartialUpdate(game, [ 'desk', 'players' ]));
   });
 
   connection.onMoveCardFromDeskToDesk((request, player, game) => {
@@ -185,6 +185,13 @@ server.on('connection', socket => {
 
   connection.onMoveCardFromHandToHand((request, player, game) => {
     game.moveCardFromHandToHand(player.id, request.fromSlotId, request.toSlotId);
+  });
+
+  connection.onUseCard((request, player, game) => {
+    game.useEnchant(player.id, request.slotId, request.targetSlotId);
+
+    getPlayersConnections([ game.getOpponent(player.id)?.id ])
+      .forEach(con => con.sendPartialUpdate(game, ['players', 'desk']))
   });
 
 })

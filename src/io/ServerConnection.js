@@ -79,6 +79,14 @@ export default class ServerConnection extends Connection {
     });
   }
 
+  sendUseCard(slotId, targetSlotId) {
+    this.send({
+      event: Events.USE_CARD,
+      slotId, 
+      targetSlotId
+    });
+  }
+
   sendCompleteTurn() {
     this.send({
       event: Events.COMPLETE_TURN,

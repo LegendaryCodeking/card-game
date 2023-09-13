@@ -24,13 +24,15 @@ export default class Game {
   state = GameState.WAITING_FOR_PLAYERS;
   desk = [ undefined, undefined, undefined, undefined, undefined, undefined ];
   players = [];
-  // TODO: Add probabilities
+
+  // TODO(vadim): Add probabilities
   cards = [
     Cards.ARROW.id,
-    Cards.FIREBALL.id,
+    // Cards.FIREBALL.id,
     Cards.REPEAT.id,
     Cards.SHIELD.id,
     Cards.REVERSE.id,
+    Cards.HEAL.id,
   ];
 
   /**
@@ -83,17 +85,37 @@ export default class Game {
     const slotAvailable = !this.desk[toSlotId];
     const playerDeskCards = this.getPlayerDeskCardsCount(playerId);
 
-    return cardInstance && slotAvailable && playerDeskCards < 3;
+    const canPlaceCard = cardInstance && slotAvailable && playerDeskCards < 3;
+
+    // If the card has a mana cost, verify that the player has
+    // enough mana to pay for it
+    const card = Cards.getCardByInstance(cardInstance);
+    if (canPlaceCard && card.getManaCost) {
+      const manaCost = card.getManaCost();
+      return player.mana >= manaCost;
+    }
+
+    return canPlaceCard;
   }
 
   moveCardFromHandToDesk(playerId, fromSlotId, toSlotId) {
     if (!this.canMoveCardFromHandToDesk(playerId, fromSlotId, toSlotId)) {
       return;
     }
+
     const player = this.getPlayer(playerId);
     const cardInstance = player.hand[fromSlotId];
+    
+    // Move card
     player.hand[fromSlotId] = undefined; 
     this.desk[toSlotId] = cardInstance;
+
+    // Pay the cost if it has it
+    const card = Cards.getCardByInstance(cardInstance);
+    if (card.getManaCost) {
+      const manaCost = card.getManaCost();
+      player.mana -= manaCost;
+    }
   }
 
   canMoveCardFromDeskToHand(playerId, fromSlotId, toSlotId) {
@@ -117,8 +139,17 @@ export default class Game {
 
     const player = this.getPlayer(playerId);
     const cardInstance = this.desk[fromSlotId];
+
+    // Move the card
     player.hand[toSlotId] = cardInstance;
     this.desk[fromSlotId] = undefined;
+
+    // Spent mana should be returned back to the player
+    const card = Cards.getCardByInstance(cardInstance);
+    if (card.getManaCost) {
+      const manaCost = card.getManaCost();
+      player.mana += manaCost;
+    }
   }
 
   canMoveCardFromDeskToDesk(playerId, fromSlotId, toSlotId) {
@@ -126,9 +157,12 @@ export default class Game {
 
     const cardInstance = this.desk[fromSlotId];
     if (cardInstance && !this.desk[toSlotId]) {
-      
+
+      // There is no way to move the pinned card
+      if (cardInstance.pinned) return false;
+
       if (cardInstance.owner === playerId) {
-        // Player can move their own card anywhere they wants
+        // Players can move their cards anywhere they want
         return true;
       } else {
         // Cards of opponents can be moved only
@@ -202,32 +236,47 @@ export default class Game {
     return this.players.find(p => p.id !== playerId);
   }
 
+  // TODO(vadim): Rename to "canUseCard"
   canUseEnchant(playerId, slotId) {
     if (!this.isPlayerTurn(playerId)) return false;
     if (this.getPlayer(playerId).enchants[slotId] === undefined) return false;
     return true;
   }
 
+  // TODO(vadim): Rename to "canUseCardOn"
   canUseEnchantOn(playerId, slotId, targetSlotId) {
+    if (!this.canUseEnchant(playerId, slotId)) return false;
+
     const player = this.getPlayer(playerId);
-    const manaCost = this.getEnchantManaCostFor(playerId, slotId, targetSlotId);
-    return player.mana >= manaCost;
+    if (desk[targetSlotId]) {
+      const manaCost = this.getEnchantManaCostFor(playerId, slotId, targetSlotId);
+      return player.mana >= manaCost;
+    }
+    return false;
   }
 
+  // TODO(vadim): Rename to "canUseCardManaCost"
   getEnchantManaCostFor(playerId, slotId, targetSlotId) {
     const cardInstance = this.getPlayer(playerId).enchants[slotId];
-    return cardInstance.getManaCost({ targetSlotId });
+    const card = Cards.getCardByInstance(cardInstance);
+    return card.getManaCost({ targetSlotId });
   }
 
   // TODO(vadim): This is temporary
+  // TODO(vadim): Rename to "useCard"
   useEnchant(playerId, slotId, targetSlotId) {
-    if (!this.canUseEnchant(playerId, slotId)) return;
     if (!this.canUseEnchantOn(playerId, slotId, targetSlotId)) return;
+
+    console.log('gg -> use enchant');
 
     const player = this.getPlayer(playerId);
     const cardInstance = player.enchants[slotId];
-    player.mana -= this.getEnchantManaCostFor(playerId, slotId, targetSlotId);
-    cardInstance.action({ game: this, player, targetSlotId });
+    const card = Cards.getCardByInstance(cardInstance);
+    const manaCost = this.getEnchantManaCostFor(playerId, slotId, targetSlotId);
+    console.log('gg -> mana cost: ' + manaCost);
+
+    player.mana -= manaCost;
+    card.action({ game: this, player, targetSlotId });
   }
 
   getPlayerCardsCount(playerId) {
@@ -387,6 +436,7 @@ export default class Game {
       // Perform action for the current card
       const cardInstance = this.desk[this.turn.slotId];
       if (cardInstance) {
+        const card = Cards.getCardByInstance(cardInstance);
         const player = this.getPlayer(cardInstance.owner);
         const opponent = this.getOpponent(cardInstance.owner);
         const slotId = this.turn.slotId;
@@ -400,7 +450,7 @@ export default class Game {
         })
 
         const context = { actions, game: this, slotId, player, opponent, cardInstance };
-        cardInstance.action(context);
+        card.action(context);
 
         // Perform "post-action" for the effects on the player
         this.players.forEach(p => {
