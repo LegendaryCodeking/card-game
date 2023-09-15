@@ -4,110 +4,198 @@ import { PlayerInstance } from "../../core/Player";
 import { Cards } from "../../core/Cards";
 
 /**
- * Connects to the specific game by gameId using the existing connection
- * to the game server. Accepts list of callbacks which are called on appropriate
- * events.
+ * Establish connection with the game server
+ * and calls appropriate callback for every received event.
+
+ * @param {number} gameId - id of the game session that should be joined
+ * @param {ServerConnection} connection - connection to the server
+ * @param {(data: any) => void} onGameStateUpdate - callbacks to call on game state update
  */
-export function useGameSession(connection, playerInfo, gameId) {
-
-  const game = useRef(new Game());
-
-  // All information extracted from the current game state ('game' variable)
-  // Basically a view of that game state. Do not modify without modifying the game state.
-  const [ player, setPlayer ] = useState(new PlayerInstance());
-  const [ opponent, setOpponent ] = useState(new PlayerInstance());
-  const [ hand, setHand ] = useState([]);
-  const [ desk, setDesk ] = useState([]);
-  const [ actions, setActions ] = useState([]);
-  const [ turn, setTurn ] = useState(new TurnState());
-
-  // Selected hand and desk slots
-
-  // FREE_MOVE - When player can move freely cards from one place to another
-  // ENCHANT_TARGET - WHen player has selected enchantment to use
-  // LOCKED - When it's another player turn
-  // TODO(vadim): Write a enum for that
-  const [ mode, setMode ] = useState('FREE_MOVE');
-
-  const [ manaCost, setManaCost ] = useState(0);
-  const [ enchantCost, setEnchantCost ] = useState([0,0,0,0,0,0]);
-
-  const [ selectedDeskSlot, setSelectedDeskSlot ] = useState(undefined);
-  const [ selectedHandSlot, setSelectedHandSlot ] = useState(undefined);
-  const [ availableDeskSlots, setAvailableDeskSlots ] = useState([]);
-
-  const [ canPullCard, setCanPullCard ] = useState(false);
-
-  /**
-   * Updates the local state of the game based on the response from the game server.
-   * Calls appropriate setters for every view of the game state (players, hand, desk, etc.).
-   */
-  function updateGame(response) {
-    const currentGame = game.current;
-    const updatedGame = game.current.update(response.data);
-
-    if (updatedGame.players !== currentGame.players) {
-      const updatedPlayer = updatedGame.getPlayer(playerInfo.id);
-      const updatedOpponent = updatedGame.getOpponent(playerInfo.id);
-
-      if (updatedPlayer) setPlayer(updatedPlayer);
-      if (updatedOpponent) setOpponent(updatedOpponent);
-
-      setHand(updatedGame.getPlayer(playerInfo.id).hand
-        .map(ref => ref === null ? undefined : ref));
-    }
-
-    if (updatedGame.desk !== currentGame.desk) {
-      setDesk(updatedGame.desk);
-      setAvailableDeskSlots(updatedGame.desk.map(() => true));
-    }
-
-    if (updatedGame.actions !== currentGame.actions) {
-      // We only want to display the last 5 actions
-      if (!updatedGame.totalActionsCount)
-        updatedGame.totalActionsCount = 0;
-      
-      setActions(actions => {
-        const newActions = actions.concat(updatedGame.actions
-          .map((action, id) => { return { 
-            id: id + updatedGame.totalActionsCount, 
-            ...action
-          }}));
-        updatedGame.totalActionsCount += updatedGame.actions.length;
-        newActions.splice(0, Math.max(newActions.length - 5, 0));
-        return newActions;
-      });
-    }
-
-    if (updatedGame.turn !== currentGame.turn) {
-      setTurn(updatedGame.turn);
-    }
-
-    game.current = updatedGame;
-  }
-
+function useGameConnection(gameId, playerInfo, connection, onGameStateUpdate) {
   useEffect(() => {
     connection.sendJoinGame(gameId, playerInfo);
 
-    connection.onFullUpdate(response => {
-      console.log("SC -> Full update")
-      updateGame(response);
-    });
-
-    connection.onPartialUpdate(response => {
-      console.log("SC -> Partial update");
-      updateGame(response);
-    });
+    connection.onFullUpdate(onGameStateUpdate);
+    connection.onPartialUpdate(onGameStateUpdate);
 
     connection.onError(response => {
       console.error(`SC -> ERROR: ${ response.data }`);
     });
   }, [ connection ]);
+}
 
-  useEffect(() => {
-    setCanPullCard(game.current.canPullCard(playerInfo.id));
-  }, [ hand, desk, turn ]);
+/**
+ * Syncs game state with the server and calls
+ * appropriate callbacks for every change in the state 
+ */
+function useGameState({ onDeskUpdate, onPlayersUpdate, onTurnUpdate, onActionsUpdate }) {
+  const game = useRef(new Game());
 
+  function onGameStateUpdate(response) {
+    const currentGame = game.current;
+    const updatedGame = game.current.update(response.data);
+
+    // We want to update view of the game state only if there were any changes
+    if (updatedGame.players !== currentGame.players)
+      onPlayersUpdate(updatedGame);
+
+    if (updatedGame.desk !== currentGame.desk)
+      onDeskUpdate(updatedGame);
+
+    if (updatedGame.actions !== currentGame.actions)
+      onActionsUpdate(updatedGame);
+
+    if (updatedGame.turn !== currentGame.turn)
+      onTurnUpdate(updatedGame);
+
+    game.current = updatedGame;
+  }
+  // TODO(vadim): Return game.current
+  return [ game, onGameStateUpdate ];
+}
+
+const GameViewState = {
+  // Player can move desk and hand cards
+  CARD_MOVE: "CARD_MOVE",
+  // Player can only select the desk card for the current use of the card from the hand
+  SELECT_DESK_TARGET: "SELECT_DESK_TARGET",
+  // Player can't selected cards from desk or hand
+  ALL_DISABLED: "ALL_DISABLED",
+}
+
+/**
+ * Establish a game session and manages the state of the game view
+ */
+export function useGameView(connection, playerInfo, gameId) {
+
+  // TODO(vadim): Remove those below
+  const [ selectedDeskSlot, setSelectedDeskSlot ] = useState(undefined);
+  const [ selectedHandSlot, setSelectedHandSlot ] = useState(undefined);
+
+  const [ player, setPlayer ] = useState(new PlayerInstance());
+  const [ opponent, setOpponent ] = useState(new PlayerInstance());
+
+  const [ hand, setHand ] = useState([]);
+  const [ desk, setDesk ] = useState([]);
+  const [ turn, setTurn ] = useState([]);
+
+  const [ selectedCardSlot, setSelectedCardSlot ] = useState({ place: 'desk', slotId: 0 });
+  const [ canPullCard, setCanPullCard ] = useState(false);
+
+  // Shows the current mana cost of the card to use
+  const [ manaCost, setManaCost ] = useState(0);
+  const [ enchantCost, setEnchantCost ] = useState([0,0,0,0,0,0]);
+  
+  // History of everything which happend in the current turn (displayed on the left)
+  const [ actions, setActions ] = useState([]);
+
+  // Current view mode (player is moving cards? selecting a target for the card? etc.)
+  const [ mode, setMode ] = useState(GameViewState.CARD_MOVE);
+
+  // Stores boolean values which define whether the player can do something with certain hand/desk cards
+  const [ availableHandSlots, setAvailableHandSlots ] = useState([]);
+  const [ availableDeskSlots, setAvailableDeskSlots ] = useState([]);
+
+  // Initialize game state and define updaters for the view of the game
+  const [ game, onGameStateUpdate ] = useGameState({
+    onPlayersUpdate: (updatedGame) => {
+      setPlayer(updatedGame.getPlayer(playerInfo.id) ?? new PlayerInstance());
+      setOpponent(updatedGame.getOpponent(playerInfo.id) ?? new PlayerInstance());
+      setHand(updatedGame.getPlayer(playerInfo.id).hand.map(v => v === null ? undefined : v));
+      setCanPullCard(updatedGame.canPullCard(playerInfo.id));
+    },
+    onDeskUpdate: (updatedGame) => {
+      setDesk(updatedGame.desk.map(v => v === null ? undefined : v));
+    },
+    onTurnUpdate: (updatedGame) => {
+      // WARNING: This setTurn() is called only to trigger the render
+      setTurn(updatedGame.turn);
+      setCanPullCard(updatedGame.canPullCard(playerInfo.id));
+    },
+    onActionsUpdate: (updatedGame) => {
+      setActions(actions => {
+        const newActions = actions.concat(updatedGame.actions ?? []);
+        // Keep only 5 latest actions
+        newActions.splice(0, Math.max(newActions.length - 5, 0));
+        return newActions;
+      });
+    }
+  });
+
+  // Establish connection with the server and update game state on events
+  useGameConnection(gameId, playerInfo, connection, onGameStateUpdate);
+
+  // ==== Functions to update the game state and the game state view ====
+
+  function moveCardFromHandToDesk(handSlotId, deskSlotId) {
+    if (game.current.canMoveCardFromHandToDesk(playerInfo.id, handSlotId, deskSlotId)) {
+      // Update our local game state
+      game.current.moveCardFromHandToDesk(playerInfo.id, handSlotId, deskSlotId);
+
+      // Update views
+      setDesk([...game.current.desk]);
+      setHand([...game.current.getPlayer(playerInfo.id).hand]);
+
+      // Commit our changes to the game server
+      connection.sendMoveCardFromHandToDesk(handSlotId, deskSlotId);
+    }
+  };
+
+  function moveCardFromDeskToDesk(fromSlotId, toSlotId) {
+    if (game.current.canMoveCardFromDeskToDesk(playerInfo.id, fromSlotId, toSlotId)) {
+      // Update our local game state
+      game.current.moveCardFromDeskToDesk(playerInfo.id, fromSlotId, toSlotId);
+
+      // Update views
+      setDesk([...game.current.desk]);
+
+      // Commit our changes to the game server
+      connection.sendMoveCardFromDeskToDesk(fromSlotId, toSlotId);
+    }
+  };
+
+  function moveCardFromDeskToHand(deskSlotId, handSlotId) {
+    if (game.current.canMoveCardFromDeskToHand(playerInfo.id, deskSlotId, handSlotId)) {
+      // Update our local game state
+      game.current.moveCardFromDeskToHand(playerInfo.id, deskSlotId, handSlotId);
+
+      // Update views
+      setHand([...game.current.getPlayer(playerInfo.id).hand]);
+      setDesk([...game.current.desk]);
+
+      // Commit our changes to the game server
+      connection.sendMoveCardFromDeskToHand(deskSlotId, handSlotId);
+    }
+  };
+
+  function moveCardFromHandToHand(fromSlotId, toSlotId) {
+    if (game.current.canMoveCardFromHandToHand(playerInfo.id, fromSlotId, toSlotId)) {
+      // Update our local game state
+      game.current.moveCardFromHandToHand(playerInfo.id, fromSlotId, toSlotId);
+
+      // Update view of the hand
+      setHand([...game.current.getPlayer(playerInfo.id).hand]);
+
+      // Commit our changes to the game server
+      connection.sendMoveCardFromHandToHand(fromSlotId, toSlotId);
+    }
+  };
+
+  function useCardOn(slotId, targetSlotId) {
+    if (game.current.canUseEnchantOn(playerInfo.id, slotId, targetSlotId)) {
+      // Update our local game state
+      game.current.useEnchant(playerInfo.id, slotId, targetSlotId);
+
+      // Update view of desk cards and the player (because usage of the card costs mana)
+      setDesk([ ...game.current.desk ]);
+      setPlayer(game.current.getPlayer(playerInfo.id));
+
+      // Commit changes to the server
+      connection.sendUseCard(slotId, targetSlotId);
+    }
+  }
+
+  // TODO(vadim): EVERTYHING BELOW SHOULD BE REFACTORED
   // TODO: Move this functions into the object below
   function showAvailableDeskSlotsForDeskCard(selectedDeskSlot) {
     setAvailableDeskSlots(game.current.desk.map((ref, deskSlot) => {
@@ -134,7 +222,6 @@ export function useGameSession(connection, playerInfo, gameId) {
     hand,
     desk,
     actions,
-    turn,
     manaCost,
     availableDeskSlots,
     selectedDeskSlot,
@@ -153,18 +240,16 @@ export function useGameSession(connection, playerInfo, gameId) {
     }, [ connection ]),
 
     selectEnchant: useCallback(function (slotId) {
-      if (mode === "ENCHANT_TARGET") {
-        setMode('FREE_MOVE');
+      if (mode === GameViewState.SELECT_DESK_TARGET) {
+        setMode(GameViewState.CARD_MOVE);
         resetAvailableDeskSlots();
         setEnchantCost(game.current.desk.map(() => 0));
       } else {
         setSelectedHandSlot(undefined);
         setSelectedDeskSlot(undefined);
-        setMode("ENCHANT_TARGET");
-        setEnchantCost(game.current.desk
-          .map((c, id) => game.current.getEnchantManaCostFor(playerInfo.id, 0, id)));
-        setAvailableDeskSlots(a => 
-          a.map((v, slotId) => game.current.canUseEnchantOn(playerInfo.id, 0, slotId)));
+        setMode(GameViewState.SELECT_DESK_TARGET);
+        setEnchantCost(game.current.desk.map((c, id) => game.current.getEnchantManaCostFor(playerInfo.id, 0, id)));
+        setAvailableDeskSlots(a => a.map((v, slotId) => game.current.canUseEnchantOn(playerInfo.id, 0, slotId)));
       }
     }, [ mode, desk ]),
 
@@ -182,11 +267,11 @@ export function useGameSession(connection, playerInfo, gameId) {
 
     // TODO(vadim): Code for card selection should be refactored
     selectDeskSlot: useCallback(function (slotId) {
-      if (mode === 'ENCHANT_TARGET') {
-        console.log("USE ENCHANT!");
+      if (mode === GameViewState.SELECT_DESK_TARGET) {
         resetAvailableDeskSlots();
-        this.useCard(0, slotId);
-        setMode('FREE_MOVE');
+        useCardOn(0, slotId);
+        setMode(GameViewState.CARD_MOVE);
+        setEnchantCost(game.current.desk.map(() => 0));
         return;
       }
 
@@ -207,10 +292,10 @@ export function useGameSession(connection, playerInfo, gameId) {
         if (selectedHandSlot !== undefined) {
           // TODO(vadim): If a spell costs any mana, we should update
           // mana of the player locally
-          this.moveCardFromHandToDesk(selectedHandSlot, slotId);
+          moveCardFromHandToDesk(selectedHandSlot, slotId);
           setSelectedHandSlot(undefined);
         } else if (selectedDeskSlot !== undefined) {
-          this.moveCardFromDeskToDesk(selectedDeskSlot, slotId);
+          moveCardFromDeskToDesk(selectedDeskSlot, slotId);
           setSelectedDeskSlot(undefined);
         }
         resetAvailableDeskSlots();
@@ -235,96 +320,15 @@ export function useGameSession(connection, playerInfo, gameId) {
       } else {
         // Move card to the free slot
         if (selectedDeskSlot !== undefined) {
-          this.moveCardFromDeskToHand(selectedDeskSlot, handSlot);
+          moveCardFromDeskToHand(selectedDeskSlot, handSlot);
           setSelectedDeskSlot(undefined);
         } else if (selectedHandSlot !== undefined) {
-          this.moveCardFromHandToHand(selectedHandSlot, handSlot);
+          moveCardFromHandToHand(selectedHandSlot, handSlot);
           setSelectedHandSlot(undefined);
         }
         resetAvailableDeskSlots();
         this.hideManaCost();
       }
     }, [ hand, desk, selectedDeskSlot, selectedHandSlot ]),
-
-    // CODE BELOWS CHANGES THE LOCAL GAME STATE
-
-    moveCardFromHandToDesk: useCallback((handSlotId, deskSlotId) => {
-      const valid = game.current.canMoveCardFromHandToDesk(playerInfo.id, handSlotId, deskSlotId);
-
-      if (valid) {
-        // Update our local game state
-        game.current.moveCardFromHandToDesk(playerInfo.id, handSlotId, deskSlotId);
-
-        // Update views
-        setDesk([...game.current.desk]);
-        setHand([...game.current.getPlayer(playerInfo.id).hand]);
-
-        // Commit our changes to the game server
-        connection.sendMoveCardFromHandToDesk(handSlotId, deskSlotId);
-      }
-    }, [ connection ]),
-
-    moveCardFromDeskToDesk: useCallback((fromSlotId, toSlotId) => {
-      const valid = game.current.canMoveCardFromDeskToDesk(playerInfo.id, fromSlotId, toSlotId);
-
-      if (valid) {
-        // Update our local game state
-        game.current.moveCardFromDeskToDesk(playerInfo.id, fromSlotId, toSlotId);
-
-        // Update views
-        setDesk([...game.current.desk]);
-
-        // Commit our changes to the game server
-        connection.sendMoveCardFromDeskToDesk(fromSlotId, toSlotId);
-      }
-    }, [ connection ]),
-
-    moveCardFromDeskToHand: useCallback((deskSlotId, handSlotId) => {
-      const valid = game.current.canMoveCardFromDeskToHand(playerInfo.id, deskSlotId, handSlotId);
-
-      if (valid) {
-        // Update our local game state
-        game.current.moveCardFromDeskToHand(playerInfo.id, deskSlotId, handSlotId);
-
-        // Update views
-        setHand([...game.current.getPlayer(playerInfo.id).hand]);
-        setDesk([...game.current.desk]);
-
-        // Commit our changes to the game server
-        connection.sendMoveCardFromDeskToHand(deskSlotId, handSlotId);
-      }
-    }, [ connection ]),
-
-    moveCardFromHandToHand: useCallback((fromSlotId, toSlotId) => {
-      const valid = game.current.canMoveCardFromHandToHand(playerInfo.id, fromSlotId, toSlotId);
-
-      if (valid) {
-        // Update our local game state
-        game.current.moveCardFromHandToHand(playerInfo.id, fromSlotId, toSlotId);
-
-        // Update view of the hand
-        setHand([...game.current.getPlayer(playerInfo.id).hand]);
-
-        // Commit our changes to the game server
-        connection.sendMoveCardFromHandToHand(fromSlotId, toSlotId);
-      }
-    }, [ connection ]),
-
-    useCard: useCallback(function (slotId, targetSlotId) {
-      const valid = game.current.canUseEnchantOn(playerInfo.id, slotId, targetSlotId);
-
-      if (valid) {
-        console.log('VALID USE');
-        // Update our local game state
-        game.current.useEnchant(playerInfo.id, slotId, targetSlotId);
-
-        // Update view of desk cards and the player (because usage of the card costs mana)
-        setDesk([ ...game.current.desk ]);
-        setPlayer(game.current.getPlayer(playerInfo.id));
-
-        // Commit changes to the server
-        connection.sendUseCard(slotId, targetSlotId);
-      }
-    }, [ connection ]),
   };
 }

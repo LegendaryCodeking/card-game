@@ -23,7 +23,7 @@
     max-height: 1.2rem;
 
     &.ManaFilled {
-      color: rgb(0, 82, 189);
+      color: rgb(0, 95, 219);
       --background-color: rgba(106, 148, 238, 0.25);
       background-color: var(--background-color);
       box-shadow: 0px 0px 2px 2px var(--background-color);

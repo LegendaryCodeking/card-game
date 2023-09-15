@@ -6,7 +6,7 @@ import PlayerHealth from "../components/player/PlayerHealth";
 import PlayerAvatar from "../components/player/PlayerAvatar";
 import PlayerEffects from "../components/PlayerEffects";
 import ActionsView from "../components/ActionsList";
-import { useGameSession } from "../io/GameSession";
+import { useGameView } from "../io/GameSession";
 import DeskSlot from "../components/DeskSlot";
 import CardDeck from "../components/CardDeck";
 import { Cards } from "../../core/Cards";
@@ -24,7 +24,7 @@ export default function GamePage({ playerInfo, connection, gameId }) {
 
   const [ showCardInfo, setShowCardInfo ] = useState(undefined);
 
-  const gameSession = useGameSession(connection, playerInfo, gameId);
+  const gameSession = useGameView(connection, playerInfo, gameId);
   const { game, player, opponent, hand, desk, actions, manaCost } = gameSession;
 
   let opponentBadge = undefined;
@@ -91,6 +91,7 @@ export default function GamePage({ playerInfo, connection, gameId }) {
           <div className="inner-card-container">
             { desk.map((instance, id) => 
               <DeskSlot key={id} 
+                player={ player }
                 owner={ instance ? { 
                   name: game.getPlayer(instance.owner).name, 
                   opponent: game.getPlayer(instance.owner).id !== player.id

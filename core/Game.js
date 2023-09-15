@@ -1,5 +1,6 @@
 import { PlayerInstance } from "./Player.js";
 import { Cards } from "./Cards.js";
+import { v4 as uuid } from "uuid";
 
 export const GameState = {
   PLAYER_TURN: "PLAYER_TURN",
@@ -248,7 +249,7 @@ export default class Game {
     if (!this.canUseEnchant(playerId, slotId)) return false;
 
     const player = this.getPlayer(playerId);
-    if (desk[targetSlotId]) {
+    if (this.desk[targetSlotId]) {
       const manaCost = this.getEnchantManaCostFor(playerId, slotId, targetSlotId);
       return player.mana >= manaCost;
     }
@@ -460,6 +461,10 @@ export default class Game {
             .forEach(a => a(actions, this, slotId, player, opponent));
         })
       }
+
+      // Every action that we send to the player
+      // should have unique identifier
+      actions.forEach(action => action.id = uuid());
 
       // Select the next card for the next execution
       const [ card, slotId ] = this.getNextDeskCard(this.turn.slotId);

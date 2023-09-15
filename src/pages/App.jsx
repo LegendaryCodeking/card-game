@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import GamePage from "./Game"
 import HomePage from "./Home"
 import Player from "../../core/Player";
