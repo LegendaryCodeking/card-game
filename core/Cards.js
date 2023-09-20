@@ -168,7 +168,7 @@ export const Cards = {
     id: "HEAL",
     icon: "patch-plus",
     name: "Лечение",
-    description: "Восстанавливает 9 здоровья",
+    description: "Восстанавливает 9 здоровья. Требует одну ману.",
     type: CardType.SPELL,
 
     getManaCost(context) {
@@ -203,7 +203,7 @@ export const Cards = {
     id: "SAINT_SHIELD",
     icon: "shield-fill-plus",
     name: "Святой щит",
-    description: "Создает щит который блокирует последующий урон и остается у вас после окончания текущего хода. Некоторые заклинания способны уничтожить данный щит.",
+    description: "Создает щит который блокирует последующий урон. Если щит не был уничтожен, то он остается у вас даже после окончания хода. Некоторые заклинания способны уничтожить данный щит.",
     type: CardType.SPELL,
 
     action(context) {

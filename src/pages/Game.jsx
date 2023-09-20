@@ -6,7 +6,7 @@ import PlayerHealth from "../components/player/PlayerHealth";
 import PlayerAvatar from "../components/player/PlayerAvatar";
 import PlayerEffects from "../components/PlayerEffects";
 import ActionsView from "../components/ActionsList";
-import { useGameView } from "../io/GameSession";
+import { useGameView, GameViewState } from "../io/GameSession";
 import DeskSlot from "../components/DeskSlot";
 import CardDeck from "../components/CardDeck";
 import { Cards } from "../../core/Cards";
@@ -25,7 +25,7 @@ export default function GamePage({ playerInfo, connection, gameId }) {
   const [ showCardInfo, setShowCardInfo ] = useState(undefined);
 
   const gameSession = useGameView(connection, playerInfo, gameId);
-  const { game, player, opponent, hand, desk, actions, manaCost } = gameSession;
+  const { game, mode, player, opponent, hand, desk, actions, manaCost } = gameSession;
 
   let opponentBadge = undefined;
   let playerBadge = undefined;
@@ -140,7 +140,8 @@ export default function GamePage({ playerInfo, connection, gameId }) {
             <CardView 
               key={id} 
               card={ instance ? Cards.getCardByInstance(instance) : undefined } 
-              enabled={ game.isPlayerTurn(player.id) }
+              // TODO(vadim): game.isPlayerTurn(playerId) - USELESS, replace with proper 'mode' check
+              enabled={ mode === GameViewState.CARD_MOVE && game.isPlayerTurn(player.id) }
               onClick={ () => gameSession.selectHandSlot(id) }
               onInfo={ () => onInfo(Cards.getCardByInstance(instance)) }
               selected={ id === gameSession.selectedHandSlot }/>)}

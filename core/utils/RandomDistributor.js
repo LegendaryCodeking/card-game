@@ -1,34 +1,28 @@
 
-const example = [
-  { weight: 1, object: 1 },
-  { weight: 1, group: [
-    { weight: 1, object: 2 },
-    { weight: 1, object: 3 }
-  ]}
-];
-
-const result = [
-  { weight: 0, object: 1 },
-  { weight: 1, object: 2 },
-  { weight: 1.5, object: 3 }
-]
-
-function findSum(objects) {
-  let sum = 0; 
-  objects.forEach(o => sum += o.weight);
-  return sum;
-}
-
-function flatten(object, max, offset, output) {
-  if (object.object) {
-    output.push()
-  }
-}
-
 export default class RandomDistributor {
 
-  constructor(groups) {
-    
+  constructor(props) {
+    Object.assign(this, props);
+  }
+
+  pick(nodes = this.nodes) {
+    let sum = 0;
+    nodes.forEach(node => sum += node.weight ?? node.w);
+
+    // NOTE: Please do not return "undefined". It will be very hard to reproduce.
+
+    const pickValue = Math.random() * sum;
+    let range = 0;
+    for (let node of nodes) {
+      range += node.weight ?? node.w;
+      if (pickValue <= range) {
+        if (node.value || node.v) return node.value ?? node.v;
+        if (node.group) return this.pick(node.group);
+        else return nodes[0].value ?? node[0].v;
+      }
+    }
+
+    return nodes[0].value ?? nodes[0].v;
   }
 
 }

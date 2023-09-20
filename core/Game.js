@@ -1,6 +1,7 @@
 import { PlayerInstance } from "./Player.js";
 import { Cards } from "./Cards.js";
 import { v4 as uuid } from "uuid";
+import RandomDistributor from "./utils/RandomDistributor.js";
 
 export const GameState = {
   PLAYER_TURN: "PLAYER_TURN",
@@ -26,15 +27,18 @@ export default class Game {
   desk = [ undefined, undefined, undefined, undefined, undefined, undefined ];
   players = [];
 
-  // TODO(vadim): Add probabilities
-  cards = [
-    Cards.ARROW.id,
-    // Cards.FIREBALL.id,
-    Cards.REPEAT.id,
-    Cards.SHIELD.id,
-    Cards.REVERSE.id,
-    Cards.HEAL.id,
-  ];
+  cards = new RandomDistributor({ nodes: [
+    { w: 0.84, group: [
+      { w: 1, v: Cards.ARROW.id },
+      { w: 1, v: Cards.FIREBALL.id },
+      { w: 1, v: Cards.REPEAT.id },
+      { w: 1, v: Cards.SHIELD.id },
+      { w: 1, v: Cards.REVERSE.id },
+    ]},
+    { w: 0.16, group: [
+      { w: 1, v: Cards.HEAL.id }
+    ]},
+  ]});
 
   /**
    * Constructs a game with provided data
@@ -42,6 +46,7 @@ export default class Game {
    */
   constructor(data) {
     Object.assign(this, data);
+    this.cards = new RandomDistributor(this.cards);
   }
 
   /**
@@ -268,14 +273,10 @@ export default class Game {
   useEnchant(playerId, slotId, targetSlotId) {
     if (!this.canUseEnchantOn(playerId, slotId, targetSlotId)) return;
 
-    console.log('gg -> use enchant');
-
     const player = this.getPlayer(playerId);
     const cardInstance = player.enchants[slotId];
     const card = Cards.getCardByInstance(cardInstance);
     const manaCost = this.getEnchantManaCostFor(playerId, slotId, targetSlotId);
-    console.log('gg -> mana cost: ' + manaCost);
-
     player.mana -= manaCost;
     card.action({ game: this, player, targetSlotId });
   }
@@ -338,13 +339,10 @@ export default class Game {
     if (!this.canPullCard(playerId) && performValidation) return;
 
     const player = this.getPlayer(playerId);
-    // The card will be a random one
-    // TODO(vadim): Do randomness better
-    const cardId = Math.round(Math.random() * this.cards.length) % this.cards.length;
-    const availableSlot = player.hand.findIndex(ref => !ref);
-    if (availableSlot >= 0) {
-      const card = Cards[this.cards[cardId]];
-      player.hand[availableSlot] = card.createInstance({ owner: player.id });
+    const availableSlotId = player.hand.findIndex(ref => !ref);
+    if (availableSlotId >= 0) {
+      const card = Cards.getCardById(this.cards.pick());
+      player.hand[availableSlotId] = card.createInstance({ owner: player.id });
     }
   }
 
