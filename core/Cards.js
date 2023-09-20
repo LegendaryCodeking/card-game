@@ -90,17 +90,18 @@ export const Cards = {
 
     // TODO(vadim): Rename to "isAffected" and "currentSlotId" to "slotId"
     // and accept the object
-    isCardAffected(game, currentSlotId, targetSlotId) {
+    isCardAffected({ game, player, currentSlotId, targetSlotId }) {
       if (game.desk[targetSlotId]) {
         const [ cardInstance, slotId ] = game.getNextDeskCard(currentSlotId);
-        return targetSlotId === slotId;
+        return targetSlotId === slotId && cardInstance.owner !== player.id;
       }
       return false;
     },
 
-    action({ actions, game, slotId, player }) {
+    action(context) {
+      const { actions, game, slotId, player } = context;
       game.desk.forEach((cardInstance, cardSlotId) => {
-        if (this.isCardAffected(game, slotId, cardSlotId)) {
+        if (this.isCardAffected({ ...context, currentSlotId: slotId, targetSlotId: cardSlotId })) {
           cardInstance.owner = player.id;
           actions.push(Action.changeOwner(cardInstance));
         }

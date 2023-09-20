@@ -133,6 +133,10 @@ export default class Game {
     if (cardInstance) {
       const slotAvailable = !player.hand[toSlotId];
       const ownsCard = cardInstance.owner === playerId;
+
+      // We can't bring back the pinned card from the desk
+      if (cardInstance.pinned) return false;
+
       return slotAvailable && ownsCard;
     }
     return false;
@@ -369,7 +373,7 @@ export default class Game {
     if (this.players.length < 2) return;
 
     if (this.state === GameState.WAITING_FOR_PLAYERS) {
-      // If the game has started:
+      // If the game has started
       // Select the first player for the first turn
 
       // TODO(vadim): Pick a random one for that
