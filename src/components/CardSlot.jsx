@@ -3,7 +3,6 @@ import style from "./CardSlot.module.css";
 import Icon from "./Icon";
 
 export default function CardSlot({ card, selected, enabled, highlighted, onClick, onInfo }) {
-
   const cardSlotEnabled = enabled ? style.CardSlotEnabled : style.CardSlotDisabled;
   const cardSelected = !highlighted && enabled && selected ? style.CardSelected : '';
   const cardHighlighted = highlighted ? style.CardHighlighted : '';

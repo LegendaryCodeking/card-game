@@ -102,11 +102,12 @@ export function useGameView(connection, playerInfo, gameId) {
     onPlayersUpdate: () => {
       setPlayer(game.current.getPlayer(playerInfo.id) ?? new PlayerInstance());
       setOpponent(game.current.getOpponent(playerInfo.id) ?? new PlayerInstance());
-      setHand(game.current.getPlayer(playerInfo.id).hand.map(v => v === null ? undefined : v));
+      setHand(game.current.getPlayer(playerInfo.id).hand);
+      console.log(game.current.getPlayer(playerInfo.id).hand);
       setCanPullCard(game.current.canPullCard(playerInfo.id));
     },
     onDeskUpdate: () => {
-      setDesk(game.current.desk.map(v => v === null ? undefined : v));
+      setDesk(game.current.desk);
     },
     onTurnUpdate: () => {
       // WARNING: This setTurn() is called only to trigger the render
@@ -204,14 +205,15 @@ export function useGameView(connection, playerInfo, gameId) {
     // If it the player turn, than all card slots are available to use for the player
     // otherwise, there is no way player should select those slots or card in them
     if (!params) {
+      // TODO(vadim): WTF did I wrote?
       setAvailableDeskSlots(game.current.desk.map(() => game.current.isPlayerTurn(playerInfo.id)));
       return;
     }
 
     // By default only show where currently selected card (passed in "params") can be moved.
     const { place, slotId } = params;
-    setAvailableDeskSlots(game.current.desk.map((ref, deskSlotId) => {
-      if (ref) return true;
+    setAvailableDeskSlots(game.current.desk.map((cardSlot, deskSlotId) => {
+      if (cardSlot.hasCard()) return true;
       if (place === 'desk')
         return game.current.canMoveCardFromDeskToDesk(playerInfo.id, slotId, deskSlotId);
       else if (place === 'hand')
@@ -286,7 +288,7 @@ export function useGameView(connection, playerInfo, gameId) {
         setSelectedDeskSlot(undefined);
         updateAvailableDeskSlots();
 
-      } else if (desk[deskSlotId]) {
+      } else if (desk[deskSlotId].hasCard()) {
         // If a certain card is selected
         setSelectedDeskSlot(deskSlotId);
         setSelectedHandSlot(undefined);
@@ -316,12 +318,12 @@ export function useGameView(connection, playerInfo, gameId) {
         updateAvailableDeskSlots();
         this.hideManaCost();
 
-      } else if (hand[handSlotId]) {
+      } else if (hand[handSlotId].hasCard()) {
         // Select a certain card
         setSelectedHandSlot(handSlotId);
         setSelectedDeskSlot(undefined);
         updateAvailableDeskSlots({ place: 'hand', slotId: handSlotId })
-        this.showManaCostFor(hand[handSlotId]);
+        this.showManaCostFor(hand[handSlotId].getCard());
 
       } else {
         // Move card to the free slot

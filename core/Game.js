@@ -1,5 +1,5 @@
 import { PlayerInstance } from "./Player.js";
-import { Cards } from "./Cards.js";
+import { CardSlot, Cards } from "./Cards.js";
 import { v4 as uuid } from "uuid";
 import RandomDistributor from "./utils/RandomDistributor.js";
 
@@ -24,7 +24,7 @@ export default class Game {
   id = undefined;
   turn = new TurnState();
   state = GameState.WAITING_FOR_PLAYERS;
-  desk = [ undefined, undefined, undefined, undefined, undefined, undefined ];
+  desk = [ new CardSlot(), new CardSlot(), new CardSlot(), new CardSlot(), new CardSlot(), new CardSlot() ];
   players = [];
 
   cards = new RandomDistributor({ nodes: [
@@ -47,6 +47,8 @@ export default class Game {
   constructor(data) {
     Object.assign(this, data);
     this.cards = new RandomDistributor(this.cards);
+    this.desk = this.desk.map(d => new CardSlot(d));
+    this.players = this.players.map(d => new PlayerInstance(d));
   }
 
   /**
@@ -62,7 +64,7 @@ export default class Game {
 
     // Add 6 card slots to the player hand
     for (let i = 0; i < 6; i++) {
-      player.hand.push(undefined);
+      player.hand.push(new CardSlot());
       this.pullCard(playerId, false);
     }
 
@@ -87,8 +89,8 @@ export default class Game {
     if (!this.isPlayerTurn(playerId)) return false;
 
     const player = this.getPlayer(playerId);
-    const cardInstance = player.hand[fromSlotId];
-    const slotAvailable = !this.desk[toSlotId];
+    const cardInstance = player.hand[fromSlotId].getCard();
+    const slotAvailable = !this.desk[toSlotId].hasCard();
     const playerDeskCards = this.getPlayerDeskCardsCount(playerId);
 
     const canPlaceCard = cardInstance && slotAvailable && playerDeskCards < 3;
@@ -110,11 +112,10 @@ export default class Game {
     }
 
     const player = this.getPlayer(playerId);
-    const cardInstance = player.hand[fromSlotId];
-    
+
     // Move card
-    player.hand[fromSlotId] = undefined; 
-    this.desk[toSlotId] = cardInstance;
+    const cardInstance = player.hand[fromSlotId].takeCard();
+    this.desk[toSlotId].setCard(cardInstance);
 
     // Pay the cost if it has it
     const card = Cards.getCardByInstance(cardInstance);
@@ -128,10 +129,10 @@ export default class Game {
     if (!this.isPlayerTurn(playerId)) return false;
 
     const player = this.getPlayer(playerId);
-    const cardInstance = this.desk[fromSlotId];
+    const cardInstance = this.desk[fromSlotId].getCard();
 
     if (cardInstance) {
-      const slotAvailable = !player.hand[toSlotId];
+      const slotAvailable = !player.hand[toSlotId].hasCard();
       const ownsCard = cardInstance.owner === playerId;
 
       // We can't bring back the pinned card from the desk
@@ -148,11 +149,10 @@ export default class Game {
     }
 
     const player = this.getPlayer(playerId);
-    const cardInstance = this.desk[fromSlotId];
 
     // Move the card
-    player.hand[toSlotId] = cardInstance;
-    this.desk[fromSlotId] = undefined;
+    const cardInstance = this.desk[fromSlotId].takeCard();
+    player.hand[toSlotId].setCard(cardInstance);
 
     // Spent mana should be returned back to the player
     const card = Cards.getCardByInstance(cardInstance);
@@ -165,8 +165,8 @@ export default class Game {
   canMoveCardFromDeskToDesk(playerId, fromSlotId, toSlotId) {
     if (!this.isPlayerTurn(playerId)) return false;
 
-    const cardInstance = this.desk[fromSlotId];
-    if (cardInstance && !this.desk[toSlotId]) {
+    const cardInstance = this.desk[fromSlotId].getCard();
+    if (cardInstance && !this.desk[toSlotId].hasCard()) {
 
       // There is no way to move the pinned card
       if (cardInstance.pinned) return false;
@@ -183,7 +183,7 @@ export default class Game {
         if (direction === 0) return false;
         
         for (let i = fromSlotId + direction; i >= 0 && i < this.desk.length; i += direction) {
-          if (this.desk[i] && this.desk[i].owner !== playerId) break;
+          if (this.desk[i].hasCard() && this.desk[i].getCard().owner !== playerId) break;
           if (i === toSlotId) return true;
         }
       }
@@ -196,16 +196,12 @@ export default class Game {
     if (!this.canMoveCardFromDeskToDesk(playerId, fromSlotId, toSlotId)) {
       return;
     }
-
-    const cardInstance = this.desk[fromSlotId];
-    this.desk[toSlotId] = cardInstance;
-    this.desk[fromSlotId] = undefined;
+    this.desk[toSlotId].setCard(this.desk[fromSlotId].takeCard());
   }
 
   canMoveCardFromHandToHand(playerId, fromSlotId, toSlotId) {
     const player = this.getPlayer(playerId);
-    const cardInstance = player.hand[fromSlotId];
-    return cardInstance && !player.hand[toSlotId];
+    return player.hand[fromSlotId].hasCard() && !player.hand[toSlotId].hasCard();
   }
 
   moveCardFromHandToHand(playerId, fromSlotId, toSlotId) {
@@ -214,11 +210,11 @@ export default class Game {
     }
 
     const player = this.getPlayer(playerId);
-    player.hand[toSlotId] = player.hand[fromSlotId];
-    player.hand[fromSlotId] = undefined;
+    player.hand[toSlotId].setCard(player.hand[fromSlotId].takeCard());
   }
 
   // TODO(vadim): This should accept playerId
+  // TODO(vadim): Tie is also an option
   isWinner(player) {
     let loser = this.players[0];
     for (let p of this.players) {
@@ -258,7 +254,7 @@ export default class Game {
     if (!this.canUseEnchant(playerId, slotId)) return false;
 
     const player = this.getPlayer(playerId);
-    if (this.desk[targetSlotId]) {
+    if (this.desk[targetSlotId].hasCard()) {
       const manaCost = this.getEnchantManaCostFor(playerId, slotId, targetSlotId);
       return player.mana >= manaCost;
     }
@@ -286,37 +282,37 @@ export default class Game {
   }
 
   getPlayerCardsCount(playerId) {
-    const cardsOnDesk = this.desk.filter((ref) => ref?.owner === playerId).length;
-    const cardsOnHand = this.getPlayer(playerId).hand
-      .filter((ref) => ref !== undefined && ref !== null).length;
+    const cardsOnDesk = this.desk.filter(cardSlot => cardSlot.getCard()?.owner === playerId).length;
+    const cardsOnHand = this.getPlayer(playerId).hand.filter(cardSlot => cardSlot.hasCard()).length;
     return cardsOnDesk + cardsOnHand; 
   }
 
   getPlayerDeskCardsCount(playerId) {
-    return this.desk.filter((ref) => ref?.owner === playerId).length;
+    return this.desk.filter(cardSlot => cardSlot.getCard()?.owner === playerId).length;
   }
 
+  // TOOD(vadim): Move to the player class
   getPlayerHandCardsCount(playerId) {
-    return this.getPlayer(playerId).hand.filter((ref) => ref !== undefined).length;
+    return this.getPlayer(playerId).hand.filter(cardSlot => cardSlot.hasCard()).length;
   }
 
   getNextDeskCard(slotId) {
     for (let i = slotId + 1; i < this.desk.length; i++) {
-      if (this.desk[i] !== undefined) return [ this.desk[i], i ];
+      if (this.desk[i].hasCard()) return [ this.desk[i].getCard(), i ];
     }
     return [ undefined, undefined ];
   }
 
   getPrevDeskCard(slotId) {
     for (let i = slotId - 1; i >= 0; i--) {
-      if (this.desk[i] !== undefined) return [ this.desk[i], i ];
+      if (this.desk[i].hasCard()) return [ this.desk[i].getCard(), i ];
     }
     return [ undefined, undefined ];
   }
 
   getLastDeskCard() {
     for (let i = this.desk.length - 1; i >= 0; i--) {
-      if (this.desk[i] !== undefined) return [ this.desk[i], i];
+      if (this.desk[i].hasCard()) return [ this.desk[i].getCard(), i];
     }
     return [ undefined, undefined ];
   }
@@ -343,10 +339,10 @@ export default class Game {
     if (!this.canPullCard(playerId) && performValidation) return;
 
     const player = this.getPlayer(playerId);
-    const availableSlotId = player.hand.findIndex(ref => !ref);
+    const availableSlotId = player.hand.findIndex(cardSlot => !cardSlot.hasCard());
     if (availableSlotId >= 0) {
       const card = Cards.getCardById(this.cards.pick());
-      player.hand[availableSlotId] = card.createInstance({ owner: player.id });
+      player.hand[availableSlotId].setCard(card.createInstance({ owner: player.id }));
     }
   }
 
@@ -357,6 +353,10 @@ export default class Game {
   giveMana(playerId) {
     const player = this.getPlayer(playerId);
     player.mana = Math.min(player.mana + 1, 3);
+  }
+
+  clearDesk() {
+    this.desk = this.desk.map(s => new CardSlot());
   }
 
   /**
@@ -409,7 +409,7 @@ export default class Game {
         // if the "execution turn" is complete
         // we will use the same player for the first turn (the last value of this.turn.playerId)
         this.state = GameState.PLAYER_TURN;
-        this.desk = [undefined, undefined, undefined, undefined, undefined, undefined];
+        this.clearDesk();
         this.players.forEach(p => p.effects = []);
         this.turn.turns += 1;
         this.giveMana(this.turn.playerId);
@@ -481,9 +481,7 @@ export default class Game {
    * @returns new game object
    */
   update(data) {
-    let game = new Game(this);
-    Object.assign(game, data);
-    return game;
+    return new Game({ ...this, ...data });
   }
   
 }

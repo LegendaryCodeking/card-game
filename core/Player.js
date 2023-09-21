@@ -1,3 +1,4 @@
+import { CardSlot } from "./Cards.js";
 
 export default class Player {
   
@@ -28,6 +29,7 @@ export class PlayerInstance {
 
   constructor(data) {
     Object.assign(this, data);
+    this.hand = this.hand.map(d => new CardSlot(d));
   }
 
   addEffect(effectInstance) {

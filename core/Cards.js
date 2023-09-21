@@ -91,7 +91,7 @@ export const Cards = {
     // TODO(vadim): Rename to "isAffected" and "currentSlotId" to "slotId"
     // and accept the object
     isCardAffected({ game, player, currentSlotId, targetSlotId }) {
-      if (game.desk[targetSlotId]) {
+      if (game.desk[targetSlotId].hasCard()) {
         const [ cardInstance, slotId ] = game.getNextDeskCard(currentSlotId);
         return targetSlotId === slotId && cardInstance.owner !== player.id;
       }
@@ -100,8 +100,9 @@ export const Cards = {
 
     action(context) {
       const { actions, game, slotId, player } = context;
-      game.desk.forEach((cardInstance, cardSlotId) => {
+      game.desk.forEach((cardSlot, cardSlotId) => {
         if (this.isCardAffected({ ...context, currentSlotId: slotId, targetSlotId: cardSlotId })) {
+          const cardInstance = cardSlot.getCard();
           cardInstance.owner = player.id;
           actions.push(Action.changeOwner(cardInstance));
         }
@@ -122,7 +123,7 @@ export const Cards = {
      * Returns true if card in targetSlotId is affected by this spell.
      */
     isCardAffected(game, currentSlotId, targetSlotId) {
-      if (game.desk[targetSlotId]) {
+      if (game.desk[targetSlotId].hasCard()) {
         const [ cardInstance, slotId ] = game.getPrevDeskCard(currentSlotId);
         return slotId === targetSlotId;
       }
@@ -131,10 +132,11 @@ export const Cards = {
 
     action(context) {
       const { game, slotId } = context;
-      game.desk.forEach((cardInstance, cardSlotId) => {
+      game.desk.forEach((cardSlot, cardSlotId) => {
         // avoid stack overflow
         if (cardSlotId === slotId) return; 
 
+        const cardInstance = cardSlot.getCard();
         if (this.isCardAffected(game, slotId, cardSlotId)) {
           const card = Cards.getCardByInstance(cardInstance);
           card.action({ ...context, slotId: cardSlotId });
@@ -151,8 +153,7 @@ export const Cards = {
     type: CardType.ENCHANT,
 
     isAffected({ game, targetSlotId }) {
-      const cardInstance = game.desk[targetSlotId];
-      return cardInstance !== undefined;
+      return game.desk[targetSlotId].hasCard();
     },
 
     getManaCost({ targetSlotId }) {
@@ -160,7 +161,7 @@ export const Cards = {
     },
 
     action({ game, targetSlotId }) {
-      const cardInstance = game.desk[targetSlotId];
+      const cardInstance = game.desk[targetSlotId].getCard();
       if (cardInstance) cardInstance.pinned = true;
     }
   }),
@@ -241,12 +242,58 @@ export const Cards = {
 
 };
 
-export class CardInstance {
+export const CardEffects = {
+  PINNED: "PINNED",
+}
 
-  constructor({ id, owner, pinned = false }) {
-    this.id = id;
-    this.owner = owner;
-    this.pinned = pinned;
+export class CardInstance {
+  id = undefined;
+  owner = undefined;
+  effects = [];
+
+  constructor(data) {
+    Object.assign(this, data);
   }
 
+  hasEffect(effect) {
+    return this.effects.find(v => v === effect) !== undefined;
+  }
+
+  addEffect(effect) {
+    this.effects.push(effect);
+  }
+
+  getCard() {
+    Cards.getCardByInstance(this);
+  }
+}
+
+export class CardSlot {
+
+  // TODO(vadim): Rename 'card' to 'cardInstance' otherwise
+  // it is too much confusion
+  card = undefined;
+  
+  constructor(data) {
+    Object.assign(this, data);
+    if (this.card) this.card = new CardInstance(this.card);
+  }
+
+  hasCard() {
+    return this.card !== undefined;
+  }
+
+  setCard(cardInstance) {
+    this.card = cardInstance;
+  }
+
+  getCard() {
+    return this.card;
+  }
+
+  takeCard() {
+    const card = this.card;
+    this.card = undefined;
+    return card;
+  }
 }
