@@ -1,8 +1,11 @@
 import { useCallback } from "react";
 import style from "./CardSlot.module.css";
 import Icon from "./Icon";
+import { CardType } from "../../core/Cards";
 
-export default function CardSlot({ card, selected, enabled, highlighted, onClick, onInfo }) {
+export default function CardSlot({ cardInstance, selected, enabled, highlighted, onClick, onInfo }) {
+  const card = cardInstance?.getCard();
+
   const cardSlotEnabled = enabled ? style.CardSlotEnabled : style.CardSlotDisabled;
   const cardSelected = !highlighted && enabled && selected ? style.CardSelected : '';
   const cardHighlighted = highlighted ? style.CardHighlighted : '';
@@ -12,10 +15,11 @@ export default function CardSlot({ card, selected, enabled, highlighted, onClick
   }, [ enabled, onClick ])
 
   let cost = undefined;
+  console.log(card);
   if (card && card.getManaCost) {
     cost = (
       <div className={`${ style.Cost }`}>
-        { card.getManaCost() } <Icon icon='hexagon-fill'/>
+        { card.getManaCost() ?? "?" } <Icon icon='hexagon-fill'/>
       </div>
     )
   }

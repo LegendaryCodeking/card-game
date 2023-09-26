@@ -1,5 +1,5 @@
 import { PlayerInstance } from "./Player.js";
-import { CardSlot, Cards } from "./Cards.js";
+import { CardSlot, CardType, Cards } from "./Cards.js";
 import { v4 as uuid } from "uuid";
 import RandomDistributor from "./utils/RandomDistributor.js";
 
@@ -28,6 +28,7 @@ export default class Game {
   players = [];
 
   cards = new RandomDistributor({ nodes: [
+    /*
     { w: 0.84, group: [
       { w: 1, v: Cards.ARROW.id },
       { w: 1, v: Cards.FIREBALL.id },
@@ -35,8 +36,12 @@ export default class Game {
       { w: 1, v: Cards.SHIELD.id },
       { w: 1, v: Cards.REVERSE.id },
     ]},
+    */
     { w: 0.16, group: [
-      { w: 1, v: Cards.HEAL.id }
+      { w: 1, v: Cards.HEAL.id },
+      { w: 1, v: Cards.ANCHOR.id },
+      { w: 1, v: Cards.CRATER.id },
+      { w: 1, v: Cards.SAINT_SHIELD.id },
     ]},
   ]});
 
@@ -60,7 +65,7 @@ export default class Game {
     console.log("GM -> Player added");
     const player = new PlayerInstance({ id: playerId, mana: 0, ...properties });
     this.players.push(player);
-    player.enchants.push(Cards.PIN.createInstance({ owner: player.id }));
+    player.enchants.push(Cards.ANCHOR.createInstance({ owner: player.id }));
 
     // Add 6 card slots to the player hand
     for (let i = 0; i < 6; i++) {
@@ -92,6 +97,11 @@ export default class Game {
     const cardInstance = player.hand[fromSlotId].getCard();
     const slotAvailable = !this.desk[toSlotId].hasCard();
     const playerDeskCards = this.getPlayerDeskCardsCount(playerId);
+
+    // Enchants only put effects on cards which are already on the desk
+    if (cardInstance.getCard().type === CardType.ENCHANT) {
+      return false;
+    }
 
     const canPlaceCard = cardInstance && slotAvailable && playerDeskCards < 3;
 
@@ -317,7 +327,7 @@ export default class Game {
     return [ undefined, undefined ];
   }
 
-  // TODO(vadim): Rename to "isCardSlotIsExecuting"
+  // TODO(vadim): Rename to "isCardSlotExecuting"
   isSlotExecuted(slotId) {
     return this.state === GameState.EXECUTION_TURN && this.turn.slotId === slotId;
   }

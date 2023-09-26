@@ -100,7 +100,7 @@ export default function GamePage({ playerInfo, connection, gameId }) {
                 enchantCost={ gameSession.enchantCost[slotId] }
                 >
                 <CardSlot
-                  card={ cardSlot.getCard() } 
+                  cardInstance={ cardSlot.getCard() } 
                   enabled={ game.isPlayerTurn(player.id) && gameSession.availableDeskSlots[slotId] }
                   onClick={ () => gameSession.selectDeskSlot(slotId) } 
                   selected={ slotId === gameSession.selectedDeskSlot } 
@@ -140,7 +140,7 @@ export default function GamePage({ playerInfo, connection, gameId }) {
           { hand.map((cardSlot, slotId) => 
             <CardSlot
               key={ slotId } 
-              card={ cardSlot.getCard() } 
+              cardInstance={ cardSlot.getCard() } 
               // TODO(vadim): game.isPlayerTurn(playerId) - USELESS, replace with proper 'mode' check
               enabled={ mode === GameViewState.CARD_MOVE && game.isPlayerTurn(player.id) }
               onClick={ () => gameSession.selectHandSlot(slotId) }

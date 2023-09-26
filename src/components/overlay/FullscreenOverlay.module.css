@@ -9,4 +9,6 @@
   display: grid;
   justify-content: center;
   align-content: center;
+
+  backdrop-filter: blur(5px) saturate(10%);
 }

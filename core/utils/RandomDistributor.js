@@ -1,4 +1,5 @@
 
+// TODO(vadim): Rename this to something better
 export default class RandomDistributor {
 
   constructor(props) {
@@ -7,6 +8,7 @@ export default class RandomDistributor {
 
   pick(nodes = this.nodes) {
     let sum = 0;
+    // TODO(vadim): Good thing to do: to not re-calculate sum of weights every call
     nodes.forEach(node => sum += node.weight ?? node.w);
 
     // NOTE: Please do not return "undefined". It will be very hard to reproduce.

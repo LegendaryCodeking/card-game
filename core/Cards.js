@@ -21,7 +21,7 @@ export default class Card {
   }
 
   createInstance(props) {
-    return new CardInstance({ ...this, ...props });
+    return new CardInstance({ id: this.id, ...props });
   }
 }
 
@@ -145,18 +145,20 @@ export const Cards = {
     },
   }),
 
-  PIN: new Card({
-    id: "PIN",
-    icon: "pin-angle",
-    name: "Закрепление",
-    description: "Закрепляет выбранную вами карту. Данную карту не сможет перемещать ваш соперник.",
+  ANCHOR: new Card({
+    id: "ANCHOR",
+    icon: "link-45deg",
+    name: "Якорь",
+    description: "Закрепляет выбранную вами карту. Данную карту не сможет перемещать как ваш соперник, так и вы.",
     type: CardType.ENCHANT,
 
     isAffected({ game, targetSlotId }) {
       return game.desk[targetSlotId].hasCard();
     },
 
-    getManaCost({ targetSlotId }) {
+    getManaCost(props) {
+      if (!props) return undefined;
+      const { targetSlotId } = props;
       return targetSlotId > 2 ? 3 - (targetSlotId - 3) : targetSlotId + 1;
     },
 
@@ -173,8 +175,8 @@ export const Cards = {
     description: "Восстанавливает 9 здоровья. Требует одну ману.",
     type: CardType.SPELL,
 
-    getManaCost(context) {
-      return 1;
+    getManaCost() {
+      return 2;
     },
 
     action({ actions, player }) {
@@ -183,24 +185,6 @@ export const Cards = {
     }
   }),
 
-  // Spells:
-  //  * Shield        (defense)
-  //  * Magic Arrow   (3 damage)
-  //  * Fireball      (6 damage)
-  //  * Repeat        (mechanics)
-  //  * Steal         (mechanics)
-
-  // Special Spells:
-  //  * Heal          (1 mana)    (9 heal)    (1/12 % prob)
-  //  * Saint Sheild  (1 mana)                (1/12 % prob)
-
-  // Enchants (advantage on attack):
-  //  * Enchain   (1-3 mana)    - pin one card
-  //  * Enlarge   (1 mana)      - card deals 3 more damage
-
-
-  /** Everything below is optionall gameplay right now */
-
   SAINT_SHIELD: new Card({
     id: "SAINT_SHIELD",
     icon: "shield-fill-plus",
@@ -208,12 +192,50 @@ export const Cards = {
     description: "Создает щит который блокирует последующий урон. Если щит не был уничтожен, то он остается у вас даже после окончания хода. Некоторые заклинания способны уничтожить данный щит.",
     type: CardType.SPELL,
 
+    getManaCost() {
+      return 3;
+    },
+
     action(context) {
       const { player } = context;
       player.addEffect(Effects.SAINT_SHIELD.createInstance());
     }
   }),
 
+  CRATER: new Card({
+    id: "CRATER",
+    icon: "slash-circle-fill",
+    name: "Кратер",
+    description: "Запрещает использование выбранной вами ячейки. В ячейку, на которое было произведенно данное зачарование, нельзя будет положить карту.",
+    type: CardType.ENCHANT,
+
+    getManaCost() {
+      return 1;
+    },
+
+    action({ game, targetSlotId }) {
+      // TOOD(vadim): Write this
+    }
+  }),
+
+  // Note: Don't use, this is a horrible card. It motivates your opponent to not play
+  // any cards at all - which is fucking the entire point of PvP game.
+  POISON: new Card({
+    id: "POISON",
+    icon: "droplet-half",
+    name: "Отравление",
+    description: "Накладывает на соперника отравление. Отравление будет отнимать 2 очка здоровья перед каждым зачитанным заклинанием в этом ходу.",
+    type: CardType.SPELL,
+
+    getManaCost() {
+      return 1;
+    },
+
+    action({}) {}
+  }),
+
+  // Note: Don't use. This game is about positioning of cards. It doesn't matter where this
+  // card is, it behaves exactly the same way. BOOORIIING
   ORACLE: new Card({
     id: "ORACLE",
     icon: "eye",
@@ -264,7 +286,7 @@ export class CardInstance {
   }
 
   getCard() {
-    Cards.getCardByInstance(this);
+    return Cards.getCardByInstance(this);
   }
 }
 
