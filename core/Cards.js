@@ -218,6 +218,30 @@ export const Cards = {
     }
   }),
 
+  IMITATOR: new Card({
+    id: "IMITATOR",
+    icon: "circle",
+    name: "Имитатор",
+    description: "Повторяет предыдущие два заклинания.",
+    type: CardType.SPELL,
+
+    getManaCost() {
+      return 3;
+    },
+
+    action(context) {
+      const { game, slotId } = context;
+
+      let [ cardInstance1, cardSlotId1 ] = game.getPrevDeskCard(slotId);
+      if (!cardInstance1) return;
+      cardInstance1.getCard().action({ ...context, slotId: cardSlotId1 });
+
+      let [ cardInstance2, cardSlotId2 ] = game.getPrevDeskCard(cardSlotId1);
+      if (!cardInstance2) return;
+      cardInstance2.getCard().action({ ...context, slotId: cardSlotId2 });
+    }
+  }),
+
   // Note: Don't use, this is a horrible card. It motivates your opponent to not play
   // any cards at all - which is fucking the entire point of PvP game.
   POISON: new Card({

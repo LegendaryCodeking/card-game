@@ -29,7 +29,7 @@ export default class Game {
 
   cards = new RandomDistributor({ nodes: [
     /*
-    { w: 0.84, group: [
+    { w: 5/6, group: [
       { w: 1, v: Cards.ARROW.id },
       { w: 1, v: Cards.FIREBALL.id },
       { w: 1, v: Cards.REPEAT.id },
@@ -37,11 +37,18 @@ export default class Game {
       { w: 1, v: Cards.REVERSE.id },
     ]},
     */
-    { w: 0.16, group: [
-      { w: 1, v: Cards.HEAL.id },
-      { w: 1, v: Cards.ANCHOR.id },
-      { w: 1, v: Cards.CRATER.id },
-      { w: 1, v: Cards.SAINT_SHIELD.id },
+    { w: 1/6, group: [
+      { w: 2/3, group: [
+        { w: 1, v: Cards.HEAL.id },
+        { w: 1, v: Cards.ANCHOR.id },       // TODO: TEST IT
+        { w: 1, v: Cards.CRATER.id },       // TODO: TEST IT
+        { w: 1, v: Cards.SAINT_SHIELD.id }, // TODO: TEST IT
+      ]},
+      /*
+      { w: 1/3, group: [
+        { w: 1, v: Cards.IMITATOR.id }
+      ]},
+      */
     ]},
   ]});
 
