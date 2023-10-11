@@ -6,6 +6,7 @@ export const Actions = {
   CHANGE_OWNER: "CHANGE_OWNER",
   DAMAGE_BLOCKED: "DAMAGE_BLOCKED",
   HEAL: "HEAL",
+  PIN: "PIN",
 }
 
 // TODO(vadim): Rename to "Actions" and merge with the previous structure
@@ -22,6 +23,10 @@ export class Action {
 
   static damageBlocked(target, source, damage) {
     return new Action({ type: Actions.DAMAGE_BLOCKED, target, source, damage });
+  }
+
+  static pinCard(target, cardId) {
+    return new Action({ type: Actions.PIN, target, cardId });
   }
 
   static effectAdded(target, effectId) {

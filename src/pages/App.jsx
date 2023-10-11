@@ -4,6 +4,7 @@ import HomePage from "./Home"
 import Player from "../../core/Player";
 import { useServerConnection } from "../io/ServerConnection";
 import { v4 } from "uuid";
+import Demo from "./Demo";
 
 export default function App() {
   const [ player, setPlayer ] = useState(new Player({ id: v4() }));
@@ -30,6 +31,7 @@ export default function App() {
     />
   )
 
-  if (gameId) return gamePage;
-  return homePage;
+  // if (gameId) return gamePage;
+  // return homePage;
+  return <Demo />
 }

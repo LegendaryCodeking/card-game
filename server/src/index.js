@@ -192,6 +192,9 @@ server.on('connection', socket => {
 
     getPlayersConnections([ game.getOpponent(player.id)?.id ])
       .forEach(con => con.sendPartialUpdate(game, ['players', 'desk']))
+
+    getPlayersConnections(game.players.map(p => p.id))
+      .forEach(con => con.sendPartialUpdate(game, ['actions']))
   });
 
 })

@@ -4,7 +4,7 @@ import Mana from "./Mana";
 export default function DeskSlot({ children, player, owner, enchantCost = 0 }) {
 
   const ownerBadge = owner ? (
-    <div className={`${ style.Owner } ${ owner.opponent ? style.Opponent : style.Player }`}>
+    <div className={`${ style.Owner } ${ owner !== player ? style.Opponent : style.Player }`}>
       { owner.name }
     </div>
   ) : undefined;

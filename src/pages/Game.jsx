@@ -6,7 +6,7 @@ import PlayerHealth from "../components/player/PlayerHealth";
 import PlayerAvatar from "../components/player/PlayerAvatar";
 import PlayerEffects from "../components/PlayerEffects";
 import ActionsView from "../components/ActionsList";
-import { useGameView, GameViewState } from "../io/GameSession";
+import { useGameView, GameViewMode } from "../io/GameSession";
 import DeskSlot from "../components/DeskSlot";
 import CardDeck from "../components/CardDeck";
 import PlayerMana from "../components/player/PlayerMana";
@@ -15,7 +15,6 @@ import CardInfoOverlay from "../components/overlay/CardInfoOverlay";
 import FullscreenOverlay from "../components/overlay/FullscreenOverlay";
 import WaitingPlayersOverlay from "../components/overlay/WaitingPlayersOverlay";
 import GameCompleteOverlay from "../components/overlay/GameCompleteOverlay";
-import EnchantUse from "../components/EnchantUse";
 
 // TODO(vadim): Use CSS modules
 
@@ -24,7 +23,7 @@ export default function GamePage({ playerInfo, connection, gameId }) {
   const [ showCardInfo, setShowCardInfo ] = useState(undefined);
 
   const gameSession = useGameView(connection, playerInfo, gameId);
-  const { game, mode, player, opponent, hand, desk, actions, manaCost } = gameSession;
+  const { game, player, opponent, hand, desk, actions, manaCost } = gameSession;
 
   let opponentBadge = undefined;
   let playerBadge = undefined;
@@ -83,27 +82,23 @@ export default function GamePage({ playerInfo, connection, gameId }) {
         <div className='center-container'>
           <div className='player-badge-container top'>
             { opponentBadge }
-            { playerBadge }
             { game.state === GameState.EXECUTION_TURN ? <PlayerEffects player={opponent} /> : undefined }
           </div>
 
           <div className="inner-card-container">
             { desk.map((cardSlot, slotId) => 
               <DeskSlot 
-                // TODO(vadim): Oh man, those props are stupid!
                 key={ slotId } 
                 player={ player }
-                owner={ cardSlot.hasCard() ? { 
-                  name: game.getPlayer(cardSlot.getCard().owner).name, 
-                  opponent: game.getPlayer(cardSlot.getCard().owner).id !== player.id
-                } : undefined }
+                owner={ game.getPlayer(cardSlot.getCard()?.owner) }
                 enchantCost={ gameSession.enchantCost[slotId] }
                 >
+
                 <CardSlot
                   cardInstance={ cardSlot.getCard() } 
-                  enabled={ game.isPlayerTurn(player.id) && gameSession.availableDeskSlots[slotId] }
+                  enabled={ gameSession.enabledDeskSlots[slotId] }
                   onClick={ () => gameSession.selectDeskSlot(slotId) } 
-                  selected={ slotId === gameSession.selectedDeskSlot } 
+                  selected={ gameSession.slotSelection.isSlotSelected('desk', slotId) } 
                   highlighted={ game.isSlotExecuted(slotId) }
                   onInfo={ () => onInfo(cardSlot.getCard()?.getCard()) }
                 />
@@ -114,7 +109,7 @@ export default function GamePage({ playerInfo, connection, gameId }) {
 
           <div className='player-badge-container bottom'>
             { game.state === GameState.EXECUTION_TURN ? <PlayerEffects player={player} /> : undefined }
-            { game.isPlayerTurn(player.id) ? <EnchantUse onClick={ gameSession.selectEnchant }/> : undefined }
+            { playerBadge }
           </div>
         </div>
 
@@ -137,15 +132,17 @@ export default function GamePage({ playerInfo, connection, gameId }) {
           <PlayerMana player={ player } cost={ manaCost }/>
         </div>
         <div className="card-container">
+
           { hand.map((cardSlot, slotId) => 
             <CardSlot
               key={ slotId } 
               cardInstance={ cardSlot.getCard() } 
               // TODO(vadim): game.isPlayerTurn(playerId) - USELESS, replace with proper 'mode' check
-              enabled={ mode === GameViewState.CARD_MOVE && game.isPlayerTurn(player.id) }
+              enabled={ gameSession.enabledHandSlots[slotId] }
               onClick={ () => gameSession.selectHandSlot(slotId) }
               onInfo={ () => onInfo(cardSlot.getCard()?.getCard()) }
-              selected={ slotId === gameSession.selectedHandSlot }/>)}
+              selected={ gameSession.slotSelection.isSlotSelected('hand', slotId) }/>)}
+
         </div>
         <div className="player-deck-container">
           <CardDeck 

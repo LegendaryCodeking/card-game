@@ -24,9 +24,6 @@ export class PlayerInstance {
   effects = [];
   mana = 0;
 
-  // TODO(vadim): This is temporary
-  enchants = [];
-
   constructor(data) {
     Object.assign(this, data);
     this.hand = this.hand.map(d => new CardSlot(d));

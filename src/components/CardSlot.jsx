@@ -9,13 +9,13 @@ export default function CardSlot({ cardInstance, selected, enabled, highlighted,
   const cardSlotEnabled = enabled ? style.CardSlotEnabled : style.CardSlotDisabled;
   const cardSelected = !highlighted && enabled && selected ? style.CardSelected : '';
   const cardHighlighted = highlighted ? style.CardHighlighted : '';
+  const cardEnchant = card?.type === CardType.ENCHANT ? style.Enchant : '';
 
   const onCardClick = useCallback(() => {
     if (enabled) onClick();
   }, [ enabled, onClick ])
 
   let cost = undefined;
-  console.log(card);
   if (card && card.getManaCost) {
     cost = (
       <div className={`${ style.Cost }`}>
@@ -27,11 +27,11 @@ export default function CardSlot({ cardInstance, selected, enabled, highlighted,
   let innerCard = undefined;
   if (card) {
     innerCard = (
-      <div className={`${ style.Card } ${ cardSelected } ${ cardHighlighted }`}>
+      <div className={`${ style.Card } ${ cardSelected } ${ cardHighlighted } ${ cardEnchant }`}>
 
         <div className={`${ style.TopOverlay }`}>
           <button className={ style.InfoButton } onClick={ onInfo }>
-            <Icon icon="info-circle" />
+            <Icon icon="question-circle" />
           </button>
           { cost }
         </div>

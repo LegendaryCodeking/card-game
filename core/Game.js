@@ -29,26 +29,31 @@ export default class Game {
 
   cards = new RandomDistributor({ nodes: [
     /*
-    { w: 5/6, group: [
-      { w: 1, v: Cards.ARROW.id },
-      { w: 1, v: Cards.FIREBALL.id },
-      { w: 1, v: Cards.REPEAT.id },
-      { w: 1, v: Cards.SHIELD.id },
-      { w: 1, v: Cards.REVERSE.id },
-    ]},
+    { w: 1, v: Cards.HEAL.id },
+    { w: 1, v: Cards.ANCHOR.id },
+    { w: 1, v: Cards.SAINT_SHIELD.id },
     */
-    { w: 1/6, group: [
-      { w: 2/3, group: [
+    { w: 5/6, name: "Non mana cards", group: [
+      { w: 1, name: "Damage cards", group: [
+        { w: 1, v: Cards.ARROW.id },
+        { w: 1, v: Cards.FIREBALL.id },
+      ]},
+      { w: 1, name: "Non damage cards", group: [
+        { w: 1, v: Cards.REPEAT.id },
+        { w: 1, v: Cards.SHIELD.id },
+        { w: 1, v: Cards.REVERSE.id },
+      ]},
+    ]},
+    { w: 1/6, name: "Mana cards", group: [
+      { w: 2/3, name: "1 mana cards", group: [
         { w: 1, v: Cards.HEAL.id },
         { w: 1, v: Cards.ANCHOR.id },       // TODO: TEST IT
         { w: 1, v: Cards.CRATER.id },       // TODO: TEST IT
         { w: 1, v: Cards.SAINT_SHIELD.id }, // TODO: TEST IT
       ]},
-      /*
-      { w: 1/3, group: [
+      { w: 1/3, name: "3 mana cards", group: [
         { w: 1, v: Cards.IMITATOR.id }
       ]},
-      */
     ]},
   ]});
 
@@ -70,9 +75,8 @@ export default class Game {
    */
   addPlayer(playerId, properties) {
     console.log("GM -> Player added");
-    const player = new PlayerInstance({ id: playerId, mana: 0, ...properties });
+    const player = new PlayerInstance({ id: playerId, mana: 3, ...properties });
     this.players.push(player);
-    player.enchants.push(Cards.ANCHOR.createInstance({ owner: player.id }));
 
     // Add 6 card slots to the player hand
     for (let i = 0; i < 6; i++) {
@@ -259,43 +263,40 @@ export default class Game {
     return this.players.find(p => p.id !== playerId);
   }
 
-  // TODO(vadim): Rename to "canUseCard"
   canUseEnchant(playerId, slotId) {
     if (!this.isPlayerTurn(playerId)) return false;
-    if (this.getPlayer(playerId).enchants[slotId] === undefined) return false;
+    if (!this.getPlayer(playerId).hand[slotId].hasCard()) return false;
     return true;
   }
 
-  // TODO(vadim): Rename to "canUseCardOn"
   canUseEnchantOn(playerId, slotId, targetSlotId) {
     if (!this.canUseEnchant(playerId, slotId)) return false;
 
     const player = this.getPlayer(playerId);
+    const enchant = player.hand[slotId].getCard().getCard();
     if (this.desk[targetSlotId].hasCard()) {
       const manaCost = this.getEnchantManaCostFor(playerId, slotId, targetSlotId);
-      return player.mana >= manaCost;
+      return player.mana >= manaCost && enchant.isAffected({ game: this, targetSlotId });
     }
     return false;
   }
 
-  // TODO(vadim): Rename to "canUseCardManaCost"
   getEnchantManaCostFor(playerId, slotId, targetSlotId) {
-    const cardInstance = this.getPlayer(playerId).enchants[slotId];
-    const card = Cards.getCardByInstance(cardInstance);
+    const card = this.getPlayer(playerId).hand[slotId].getCard().getCard();
     return card.getManaCost({ targetSlotId });
   }
 
-  // TODO(vadim): This is temporary
-  // TODO(vadim): Rename to "useCard"
   useEnchant(playerId, slotId, targetSlotId) {
     if (!this.canUseEnchantOn(playerId, slotId, targetSlotId)) return;
 
     const player = this.getPlayer(playerId);
-    const cardInstance = player.enchants[slotId];
-    const card = Cards.getCardByInstance(cardInstance);
+    const card = player.hand[slotId].getCard().getCard();
     const manaCost = this.getEnchantManaCostFor(playerId, slotId, targetSlotId);
     player.mana -= manaCost;
-    card.action({ game: this, player, targetSlotId });
+
+    this.actions = [];
+    card.action({ game: this, actions: this.actions, player, targetSlotId });
+    player.hand[slotId].takeCard();
   }
 
   getPlayerCardsCount(playerId) {
@@ -454,8 +455,9 @@ export default class Game {
       }
 
       // Perform action for the current card
-      const cardInstance = this.desk[this.turn.slotId];
-      if (cardInstance) {
+      const cardSlot = this.desk[this.turn.slotId];
+      if (cardSlot.hasCard()) {
+        const cardInstance = cardSlot.getCard();
         const card = Cards.getCardByInstance(cardInstance);
         const player = this.getPlayer(cardInstance.owner);
         const opponent = this.getOpponent(cardInstance.owner);

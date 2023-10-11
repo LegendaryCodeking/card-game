@@ -103,8 +103,10 @@ export const Cards = {
       game.desk.forEach((cardSlot, cardSlotId) => {
         if (this.isCardAffected({ ...context, currentSlotId: slotId, targetSlotId: cardSlotId })) {
           const cardInstance = cardSlot.getCard();
-          cardInstance.owner = player.id;
-          actions.push(Action.changeOwner(cardInstance));
+          if (cardInstance.owner !== player.id) {
+            cardInstance.owner = player.id;
+            actions.push(Action.changeOwner(cardInstance));
+          }
         }
       });
     }
@@ -153,7 +155,7 @@ export const Cards = {
     type: CardType.ENCHANT,
 
     isAffected({ game, targetSlotId }) {
-      return game.desk[targetSlotId].hasCard();
+      return game.desk[targetSlotId].hasCard() && !game.desk[targetSlotId].getCard().pinned;
     },
 
     getManaCost(props) {
@@ -162,9 +164,12 @@ export const Cards = {
       return targetSlotId > 2 ? 3 - (targetSlotId - 3) : targetSlotId + 1;
     },
 
-    action({ game, targetSlotId }) {
+    action({ game, player, actions, targetSlotId }) {
       const cardInstance = game.desk[targetSlotId].getCard();
-      if (cardInstance) cardInstance.pinned = true;
+      if (cardInstance) {
+        actions.push(Action.pinCard(player.id, targetSlotId));
+        cardInstance.pinned = true;
+      }
     }
   }),
 
@@ -176,7 +181,7 @@ export const Cards = {
     type: CardType.SPELL,
 
     getManaCost() {
-      return 2;
+      return 1;
     },
 
     action({ actions, player }) {
@@ -193,7 +198,7 @@ export const Cards = {
     type: CardType.SPELL,
 
     getManaCost() {
-      return 3;
+      return 1;
     },
 
     action(context) {
@@ -220,7 +225,7 @@ export const Cards = {
 
   IMITATOR: new Card({
     id: "IMITATOR",
-    icon: "circle",
+    icon: "arrow-repeat",
     name: "Имитатор",
     description: "Повторяет предыдущие два заклинания.",
     type: CardType.SPELL,
@@ -333,6 +338,7 @@ export class CardSlot {
     this.card = cardInstance;
   }
 
+  // TODO: Rename to "getCardInstance"
   getCard() {
     return this.card;
   }

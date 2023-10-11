@@ -14,12 +14,11 @@ export default function ActionsList({ actions, game }) {
   }
 
   function getAction(action, id) {
-    const players = game.players;
-    const opponent = players.find(p => p.id === action.target);
+    const targetPlayer = game.getPlayer(action.target);
 
     if (action.type === Actions.DAMAGE) {
       return renderAction(action.id, "heartbreak", 
-        (<><b>{ opponent.name }</b> {action.damage} урона</>))
+        (<><b>{ targetPlayer.name }</b> {action.damage} урона</>))
     }
 
     if (action.type === Actions.CHANGE_OWNER) {
@@ -29,19 +28,30 @@ export default function ActionsList({ actions, game }) {
 
     if (action.type === Actions.DAMAGE_BLOCKED) {
       return renderAction(action.id, "shield", 
-        (<><b>{ opponent.name }</b> блокирует { action.damage } урона</>))
+        (<><b>{ targetPlayer.name }</b> блокирует { action.damage } урона</>))
     }
 
     if (action.type === Actions.EFFECT_ADDED) {
       const effectName = Effects.getEffectById(action.effectId).name;
       return renderAction(action.id, "plus-circle", 
-        (<><b>{ opponent.name }</b> получает { effectName }</>))
+        (<><b>{ targetPlayer.name }</b> получает { effectName }</>))
     }
 
     if (action.type === Actions.EFFECT_REMOVED) {
       const effectName = Effects.getEffectById(action.effectId).name;
       return renderAction(action.id, "dash-circle", 
-        (<><b>{ opponent.name }</b> теряет { effectName }</>))
+        (<><b>{ targetPlayer.name }</b> теряет { effectName }</>))
+    }
+
+    if (action.type === Actions.HEAL) {
+      return renderAction(actions.id, "patch-plus", 
+        (<>{ targetPlayer.name } получает { action.heal } здоровья</>))
+    }
+
+    if (action.type === Actions.PIN) {
+      const cardName = game.desk[action.cardId].getCard().getCard().name;
+      return renderAction(actions.id, "link-45deg",
+        (<>{ targetPlayer.name } закрепил карту { cardName }</>))
     }
 
     return undefined;
